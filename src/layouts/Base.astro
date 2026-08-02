@@ -1,0 +1,242 @@
+---
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+
+const {
+  title = 'Krylabs — Apps & Products by Krithick Santhosh',
+  description = 'Krylabs is an independent studio founded by Krithick Santhosh, building iOS apps (ReelMark, BubbleNest, BlockBud, Cocotree AI) and web products (Galentini, Comet, LeadOven).',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://krylabs.com').href;
+
+const navLinks = [
+  { href: '/#work', label: 'Work' },
+  { href: '/#founder', label: 'About' },
+  { href: '/#contact', label: 'Contact' },
+];
+
+const footerLinks = [
+  { href: '/legal/terms', label: 'Terms & Conditions' },
+  { href: '/legal/privacy', label: 'Privacy Policy' },
+  { href: '/legal/refunds', label: 'Cancellation & Refunds' },
+  { href: '/legal/shipping', label: 'Shipping & Delivery' },
+  { href: '/legal/pricing', label: 'Pricing' },
+  { href: '/legal/contact', label: 'Contact' },
+  { href: '/about', label: 'About' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Mark JS available before paint so CSS can pre-hide animated elements (avoids FOUC).
+      var d = document.documentElement;
+      d.classList.add('has-js');
+      // Safety net: if motion never initializes (asset/JS failure), reveal content anyway.
+      setTimeout(function () {
+        if (!d.classList.contains('motion-ready')) d.classList.remove('has-js');
+      }, 3000);
+    </script>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content="Krithick Santhosh" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="theme-color" content="#fbfbf9" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Krylabs" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <ClientRouter />
+  </head>
+  <body>
+    <header class="nav" id="nav">
+      <div class="container nav__inner">
+        <a href="/" class="nav__logo">Krylabs</a>
+        <nav class="nav__links">
+          {navLinks.map((l) => <a href={l.href}>{l.label}</a>)}
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <nav class="footer__links">
+          {footerLinks.map((l) => <a href={l.href}>{l.label}</a>)}
+        </nav>
+        <p class="footer__meta">
+          &copy; 2026 <strong>Krylabs</strong>. All rights reserved.<br />
+          Owned and operated by Krithick Santhosh &middot; Bengaluru, Karnataka, India
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      import Lenis from 'lenis';
+      import { gsap } from 'gsap';
+      import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Nav scroll state — query fresh so it survives view-transition DOM swaps.
+      function onScroll() {
+        const nav = document.getElementById('nav');
+        if (nav) nav.classList.toggle('is-scrolled', window.scrollY > 24);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      let lenis = null;
+      let rafCb = null;
+
+      // Re-runs on first load AND after every Astro view transition.
+      function setupMotion() {
+        onScroll();
+        document.documentElement.classList.add('motion-ready');
+        if (reduce) return; // CSS reveals everything for reduced-motion users
+
+        // Tear down the previous page's instances before rebuilding.
+        if (rafCb) { gsap.ticker.remove(rafCb); rafCb = null; }
+        if (lenis) { lenis.destroy(); lenis = null; }
+        ScrollTrigger.getAll().forEach((t) => t.kill());
+
+        // Lenis smooth scroll.
+        lenis = new Lenis({
+          duration: 1.1,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true,
+          wheelMultiplier: 0.95,
+          touchMultiplier: 1.5,
+        });
+        lenis.on('scroll', ScrollTrigger.update);
+        rafCb = (time) => lenis.raf(time * 1000);
+        gsap.ticker.add(rafCb);
+        gsap.ticker.lagSmoothing(0);
+
+        // ---- Hero entrance timeline (on load) ----
+        if (document.querySelector('.hero-name__inner')) {
+          gsap.set('.hero-name__inner', { yPercent: 120, opacity: 1 });
+          gsap.set(['.hero-eyebrow', '.hero-tagline'], { opacity: 0, y: 26 });
+          gsap.set('.hero-actions > *', { opacity: 0, y: 20 });
+          gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .to('.hero-eyebrow', { opacity: 1, y: 0, duration: 0.6 }, 0.15)
+            .to('.hero-name__inner', { yPercent: 0, duration: 1.1, ease: 'power4.out' }, 0.25)
+            .to('.hero-tagline', { opacity: 1, y: 0, duration: 0.7 }, 0.75)
+            .to('.hero-actions > *', { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 }, 0.9);
+        }
+
+        // ---- Mask reveals: text slides up from behind a clip ----
+        gsap.utils.toArray('[data-mask]').forEach((wrap) => {
+          const inner = wrap.querySelector('.mask-inner');
+          if (!inner) return;
+          gsap.set(inner, { yPercent: 120, opacity: 1 });
+          gsap.to(inner, {
+            yPercent: 0,
+            duration: 0.95,
+            ease: 'power4.out',
+            scrollTrigger: { trigger: wrap, start: 'top 86%', once: true },
+          });
+        });
+
+        // ---- Staggered group reveals (card / feature grids) ----
+        gsap.utils.toArray('[data-reveal-group]').forEach((group) => {
+          const items = group.querySelectorAll('[data-reveal-item]');
+          gsap.set(items, { opacity: 0, y: 42 });
+          gsap.to(items, {
+            opacity: 1,
+            y: 0,
+            duration: 0.75,
+            ease: 'power3.out',
+            stagger: 0.09,
+            scrollTrigger: { trigger: group, start: 'top 84%', once: true },
+          });
+        });
+
+        // ---- Single element reveals ----
+        gsap.utils.toArray('[data-reveal]').forEach((el) => {
+          gsap.set(el, { opacity: 0, y: 30 });
+          gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 90%', once: true },
+          });
+        });
+
+        // ---- Count-up stats (social proof) ----
+        gsap.utils.toArray('[data-count]').forEach((el) => {
+          const target = parseFloat(el.getAttribute('data-count')) || 0;
+          const suffix = el.getAttribute('data-suffix') || '';
+          const o = { v: 0 };
+          el.textContent = '0' + suffix;
+          gsap.to(o, {
+            v: target,
+            duration: 1.6,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: el, start: 'top 90%', once: true },
+            onUpdate: () => { el.textContent = Math.round(o.v) + suffix; },
+          });
+        });
+
+        // ---- Magnetic buttons (subtle cursor attraction) ----
+        gsap.utils.toArray('.btn').forEach((btn) => {
+          btn.addEventListener('mousemove', (e) => {
+            const r = btn.getBoundingClientRect();
+            gsap.to(btn, {
+              x: (e.clientX - r.left - r.width / 2) * 0.18,
+              y: (e.clientY - r.top - r.height / 2) * 0.32,
+              duration: 0.45,
+              ease: 'power2.out',
+            });
+          });
+          btn.addEventListener('mouseleave', () => {
+            gsap.to(btn, { x: 0, y: 0, duration: 0.55, ease: 'elastic.out(1, 0.4)' });
+          });
+        });
+
+        // ---- Project cards tilt toward the cursor (a little "moveable") ----
+        gsap.utils.toArray('.card').forEach((card) => {
+          card.addEventListener('mousemove', (e) => {
+            const r = card.getBoundingClientRect();
+            const px = (e.clientX - r.left) / r.width - 0.5;
+            const py = (e.clientY - r.top) / r.height - 0.5;
+            gsap.to(card, {
+              rotateY: px * 6,
+              rotateX: -py * 6,
+              y: -6,
+              duration: 0.4,
+              ease: 'power2.out',
+              transformPerspective: 900,
+              transformOrigin: 'center',
+            });
+          });
+          card.addEventListener('mouseleave', () => {
+            gsap.to(card, { rotateX: 0, rotateY: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' });
+          });
+        });
+
+        ScrollTrigger.refresh();
+      }
+
+      document.addEventListener('astro:page-load', setupMotion);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+---
+import Base from './Base.astro';
+const {
+  title,
+  updated = 'June 2026',
+  description,
+  eyebrow = 'Krylabs · Legal',
+  backHref = '/',
+  backLabel = '← Back to Krylabs',
+} = Astro.props;
+---
+
+<Base title={`${title} — Krylabs`} description={description}>
+  <section class="page">
+    <div class="container">
+      <p class="eyebrow" data-reveal>{eyebrow}</p>
+      <h1 class="page__title" data-reveal>{title}</h1>
+      <p class="subhero__lead" data-reveal style="margin-top:14px">Last updated: {updated}</p>
+      <div class="prose" data-reveal>
+        <slot />
+      </div>
+      <a class="back-link link" href={backHref}>{backLabel}</a>
+    </div>
+  </section>
+</Base>

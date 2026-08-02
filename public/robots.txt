@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://krylabs.com/sitemap-index.xml

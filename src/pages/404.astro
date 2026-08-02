@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+---
+<Base title="Page not found — Krylabs">
+  <PageHero
+    eyebrow="Error 404"
+    title="This page wandered <em>off</em>."
+    lead="The link's broken or the page has moved. Let's get you back to something that works."
+  >
+    <div slot="actions" class="subhero__actions" data-reveal>
+      <a href="/" class="btn">Back to Krylabs</a>
+      <a href="/#work" class="btn btn--ghost">See our work</a>
+    </div>
+  </PageHero>
+</Base>

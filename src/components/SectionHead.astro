@@ -1,0 +1,9 @@
+---
+// Uniform section header: monospace eyebrow + masked title + optional lead.
+const { eyebrow, title, lead } = Astro.props;
+---
+<div class="section__head">
+  <p class="eyebrow" data-reveal>{eyebrow}</p>
+  <h2 class="section__title mask" data-mask><span class="mask-inner">{title}</span></h2>
+  {lead && <p class="section__lead" data-reveal>{lead}</p>}
+</div>

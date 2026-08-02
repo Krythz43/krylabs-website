@@ -1,0 +1,239 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Card from '../components/Card.astro';
+import Stat from '../components/Stat.astro';
+import Testimonial from '../components/Testimonial.astro';
+
+const iosApps = [
+  {
+    icon: '/assets/icons/reelmark.jpg',
+    name: 'ReelMark',
+    sub: 'Bookmarks for Reels',
+    desc: 'Save Reels from Instagram into tidy collections — recipes, workouts, ideas — so the good ones never disappear into your DMs again.',
+    learn: '/reelmark',
+    store: 'https://apps.apple.com/in/app/reelmark-bookmark-for-reels/id6758064805',
+    badge: 'Check this out!',
+  },
+  {
+    icon: '/assets/icons/bubblenest.jpg',
+    name: 'BubbleNest',
+    sub: 'Friend-Finding App',
+    desc: "Make friends through what you're into right now. Post a bubble, find like-minded people nearby, and turn shared vibes into real plans.",
+    learn: '/bubblenest',
+    store: 'https://apps.apple.com/in/app/bubblenest-friend-finding-app/id6743532224',
+  },
+  {
+    icon: '/assets/icons/blockbud.jpg',
+    name: 'BlockBud',
+    sub: 'Custom App Blocker',
+    desc: 'Your screen time, your rules. Build fully custom focus screens, block what distracts you, and keep every bit of your data on your own device.',
+    learn: '/blockbud',
+    store: 'https://apps.apple.com/in/app/blockbud-custom-app-blocker/id6753329479',
+  },
+  {
+    icon: '/assets/icons/cocotree.jpg',
+    name: 'Cocotree AI',
+    sub: 'AI Food Recommendations',
+    desc: 'Personalized food recommendations powered by AI, tuned to your taste and dietary needs. Discover your next favorite dish.',
+    store: 'https://apps.apple.com/in/app/cocotree-ai-food-suggestions/id6475201153',
+  },
+  {
+    // No image icon yet — One's brand mark is the orange dot. Not on the App
+    // Store yet, so no `store` link (the card just shows "Learn more").
+    emoji: '🟠',
+    name: 'One',
+    sub: 'Day Planner, One Task at a Time',
+    desc: 'A calm day planner & habit tracker. Tackle your day one task at a time, build habits that stick, and keep everything in sync across iPhone, iPad and Mac.',
+    learn: '/oneatatime/',
+  },
+];
+
+const products = [
+  {
+    emoji: '🥂',
+    name: 'Galentini',
+    tag: 'Web',
+    sub: 'Social Dining Events',
+    desc: 'Curated social dining events that bring women together — discover gatherings, reserve your seat, and meet new people over a great meal.',
+    href: 'https://galentini.com',
+  },
+  {
+    emoji: '☄️',
+    name: 'Comet',
+    tag: 'Automation',
+    sub: 'Instagram Comment Replies',
+    desc: 'Never miss an engagement. Comet automatically replies to your Instagram comments, so conversations keep flowing while you focus on creating.',
+    href: 'https://comet.krylabs.com',
+  },
+  {
+    emoji: '🔥',
+    name: 'LeadOven',
+    tag: 'Automation',
+    sub: 'WhatsApp Lead Qualification',
+    desc: 'Turn inbound chats into qualified leads. LeadOven qualifies and nurtures prospects over WhatsApp automatically, so you only talk to the ones ready to buy.',
+    href: 'https://leadoven.krylabs.com',
+  },
+];
+
+// Social proof — honest, verifiable body-of-work numbers (count up on scroll).
+const stats = [
+  { value: 4, label: 'Apps live on the App Store' },
+  { value: 7, label: 'Products shipped end-to-end' },
+  { value: 100, suffix: '%', label: 'Designed & built in-house' },
+];
+
+// PLACEHOLDER reviews — replace each with a REAL App Store review before launch.
+const reviews = [
+  { quote: 'Add a real ReelMark review here — short, specific reviews convert best.', author: 'Reviewer name', meta: 'ReelMark · placeholder' },
+  { quote: 'Add a real BlockBud review here.', author: 'Reviewer name', meta: 'BlockBud · placeholder' },
+  { quote: 'Add a real BubbleNest review here.', author: 'Reviewer name', meta: 'BubbleNest · placeholder' },
+];
+
+const showReviews = false; // flip to true once real App Store reviews are added
+---
+
+<Base>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <p class="eyebrow hero-eyebrow">Independent App &amp; Product Studio</p>
+      <h1 class="hero-name"><span class="hero-name__mask"><span class="hero-name__inner">Krylabs</span></span></h1>
+      <p class="hero-tagline">
+        We design, build &amp; ship <em>our own</em> iOS apps and products — end to end,
+        in-house. By Krithick Santhosh, from Bangalore.
+      </p>
+      <div class="hero-actions">
+        <a href="/#work" class="btn">See our work</a>
+        <a href="/#contact" class="btn btn--ghost">Get in touch</a>
+      </div>
+      <p class="hero-trust" data-reveal>Free on the App Store · Independent &amp; built in-house.</p>
+      <div class="hero-creds" data-reveal>
+        <span>Ex-PhonePe</span><span class="dot">·</span><span>Ex-Blinkit</span><span class="dot">·</span><span>IIT Kharagpur</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats / social proof -->
+  <section class="stats-band">
+    <div class="container">
+      <div class="stats" data-reveal-group>
+        {stats.map((s) => <Stat value={s.value} suffix={s.suffix} label={s.label} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- Work -->
+  <section class="section section--soft" id="work">
+    <div class="container">
+      <SectionHead
+        eyebrow="Our Work"
+        title="Designed, built & shipped in-house."
+        lead="Everything here is independently designed, developed and published by Krithick Santhosh under Krylabs."
+      />
+
+      <p class="group-label" data-reveal>iOS Apps</p>
+      <div class="grid" data-reveal-group>
+        {iosApps.map((a) => (
+          <Card
+            icon={a.icon}
+            emoji={a.emoji}
+            tag="iOS App"
+            title={a.name}
+            subtitle={a.sub}
+            desc={a.desc}
+            badge={a.badge}
+            links={[
+              ...(a.learn ? [{ href: a.learn, label: 'Learn more' }] : []),
+              ...(a.store ? [{ href: a.store, label: 'App Store', muted: true, external: true }] : []),
+            ]}
+          />
+        ))}
+      </div>
+
+      <p class="group-label" data-reveal>Products &amp; Tools</p>
+      <div class="grid" data-reveal-group>
+        {products.map((p) => (
+          <Card
+            emoji={p.emoji}
+            tag={p.tag}
+            title={p.name}
+            subtitle={p.sub}
+            desc={p.desc}
+            links={[{ href: p.href, label: 'Visit site', muted: true, external: true }]}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Founder -->
+  <section class="section" id="founder">
+    <div class="container">
+      <div class="section__head" data-reveal>
+        <p class="eyebrow">About the Founder</p>
+      </div>
+      <div class="founder">
+        <div class="founder__photo" data-reveal>
+          <img src="/assets/krithick-santhosh.jpg" alt="Krithick Santhosh — founder of Krylabs" />
+        </div>
+        <div class="founder__body" data-reveal>
+          <p class="founder__name">Krithick Santhosh</p>
+          <p class="founder__role">Founder &amp; Developer, Krylabs</p>
+          <p>
+            Krithick is an iOS engineer and the sole founder of Krylabs. With a background from
+            IIT Kharagpur and professional experience at companies like PhonePe and Blinkit, he
+            brings expertise in building high-quality mobile applications and web products.
+          </p>
+          <p>
+            Every Krylabs app and product is independently designed, developed and published by
+            Krithick Santhosh.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* Reviews hidden until real App Store reviews are ready — set showReviews = true to re-enable */}
+  {showReviews && (
+    <section class="section section--soft">
+      <div class="container">
+        <SectionHead eyebrow="Reviews" title="What people are saying." />
+        <div class="quotes" data-reveal-group>
+          {reviews.map((r) => <Testimonial quote={r.quote} author={r.author} meta={r.meta} />)}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Contact -->
+  <section class="section section--soft" id="contact">
+    <div class="container">
+      <SectionHead
+        eyebrow="Contact"
+        title="Say hello."
+        lead="Questions, feedback, or press — the inbox is always open."
+      />
+      <div class="contact__grid">
+        <div class="contact__item" data-reveal>
+          <h4>Email</h4>
+          <a class="big link" href="mailto:info.krylabs@gmail.com">info.krylabs@gmail.com</a>
+        </div>
+        <div class="contact__item" data-reveal>
+          <h4>Connect with Krithick</h4>
+          <div class="socials">
+            <a href="https://www.linkedin.com/in/krithick-santhosh/" target="_blank" rel="noopener" title="LinkedIn" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+            </a>
+            <a href="https://github.com/Krythz43" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            </a>
+            <a href="https://x.com/krithick_n" target="_blank" rel="noopener" title="X (Twitter)" aria-label="X">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

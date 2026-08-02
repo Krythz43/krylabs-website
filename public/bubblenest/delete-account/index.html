@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Your Account - BubbleNest</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <style>
+        .delete-card {
+            border: 1px solid #e5e5e5;
+            border-radius: 14px;
+            padding: 28px;
+            margin: 24px 0;
+        }
+        .delete-card h2 {
+            margin-top: 0 !important;
+            border-bottom: none !important;
+        }
+        .delete-card ol { margin: 12px 0 0 22px; }
+        .delete-card ol li { margin-bottom: 6px; }
+        .consent-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 18px 0;
+        }
+        .consent-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 3px;
+            flex-shrink: 0;
+            accent-color: #d92d20;
+        }
+        .danger-btn {
+            display: inline-block;
+            background: #d92d20;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .danger-btn:hover { background: #b42318; }
+        .danger-btn:disabled { background: #fda29b; cursor: not-allowed; }
+        .status-box {
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-size: 15px;
+        }
+        .status-error { background: #fef3f2; color: #b42318; border: 1px solid #fda29b; }
+        .status-success { background: #ecfdf3; color: #067647; border: 1px solid #abefc6; }
+        .status-info { background: #f0f4ff; color: #3538cd; border: 1px solid #c7d7fe; }
+        .signed-in-email { font-weight: 700; }
+        .hidden { display: none; }
+        .muted-note { color: #667085; font-size: 14px; margin-top: 14px; }
+        #gsi-button-holder { margin-top: 16px; min-height: 44px; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo"><a href="/">BubbleNest</a></h1>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/privacy">Privacy Policy</a>
+                    <a href="/terms">Terms of Service</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="legal-page">
+        <div class="container">
+            <h1>Delete Your BubbleNest Account</h1>
+            <p class="last-updated">This page applies to the BubbleNest app by KryLabs.</p>
+
+            <section>
+                <p>Deleting your account is <strong>permanent and cannot be undone</strong>. When your account is deleted, we remove all data associated with it from our servers, including:</p>
+                <ul style="margin: 12px 0 0 22px;">
+                    <li>Your profile (name, age, interests, preferences, and profile details)</li>
+                    <li>Your photos (removed from our servers; nothing is retained after deletion)</li>
+                    <li>Your matches, chats, and messages</li>
+                    <li>Your bubbles, comments, and community memberships</li>
+                    <li>Your connection requests, vibe tokens, and event preferences</li>
+                    <li>Your device identifiers used for push notifications</li>
+                </ul>
+                <p style="margin-top: 12px;">No data is retained after account deletion, as described in our <a href="/privacy">Privacy Policy</a>. Active subscriptions are managed by Google Play or the App Store — cancel them in your store account, as deleting your BubbleNest account does not cancel a store subscription.</p>
+            </section>
+
+            <div class="delete-card">
+                <h2>Option 1 — Delete from within the app</h2>
+                <ol>
+                    <li>Open BubbleNest and go to your <strong>Profile</strong></li>
+                    <li>Open <strong>Settings</strong></li>
+                    <li>Tap <strong>Delete Account</strong> and confirm</li>
+                </ol>
+            </div>
+
+            <div class="delete-card">
+                <h2>Option 2 — Delete right here</h2>
+                <p>Sign in with the same Google account you use in BubbleNest, and we will permanently delete your account and all its data immediately.</p>
+
+                <div id="step-consent">
+                    <div class="consent-row">
+                        <input type="checkbox" id="consent-check">
+                        <label for="consent-check">I understand this permanently deletes my BubbleNest account and all associated data, and this cannot be undone.</label>
+                    </div>
+                    <div id="gsi-button-holder" class="hidden"></div>
+                </div>
+
+                <div id="step-confirm" class="hidden">
+                    <div class="status-box status-info">
+                        Signed in as <span class="signed-in-email" id="confirm-email"></span>. Clicking the button below will permanently delete the BubbleNest account linked to this Google account.
+                    </div>
+                    <button class="danger-btn" id="delete-btn">Permanently delete my account</button>
+                </div>
+
+                <div id="step-result" class="hidden"></div>
+            </div>
+
+            <div class="delete-card">
+                <h2>Signed up with a phone number or Apple?</h2>
+                <p>Email us at <a href="mailto:info.krylabs@gmail.com?subject=Delete%20my%20BubbleNest%20account">info.krylabs@gmail.com</a> from the contact you used to sign up, with the subject "Delete my BubbleNest account". We will verify it is you and complete the deletion within 30 days.</p>
+            </div>
+
+            <p class="muted-note">Questions about your data? See our <a href="/privacy">Privacy Policy</a> or <a href="/contact">contact us</a>.</p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>BubbleNest</h3>
+                    <p>Find your perfect vibe and connect with like-minded friends.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 BubbleNest. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Same Web OAuth client the apps use as serverClientId; the backend
+        // validates this audience in POST /auth/google.
+        var GOOGLE_CLIENT_ID = "518818900795-kcu2bjkndfl0i682pktv1b5r4jsn3ch7.apps.googleusercontent.com";
+        var idToken = null;
+        var gsiRendered = false;
+
+        function show(id) { document.getElementById(id).classList.remove("hidden"); }
+        function hide(id) { document.getElementById(id).classList.add("hidden"); }
+
+        function decodeEmail(jwt) {
+            try {
+                var payload = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+                return payload.email || "your Google account";
+            } catch (e) {
+                return "your Google account";
+            }
+        }
+
+        function onCredential(response) {
+            idToken = response.credential;
+            document.getElementById("confirm-email").textContent = decodeEmail(idToken);
+            hide("step-consent");
+            show("step-confirm");
+        }
+
+        function renderGsiButton() {
+            if (gsiRendered || !window.google || !google.accounts) return;
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: onCredential,
+                auto_select: false
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("gsi-button-holder"),
+                { theme: "outline", size: "large", text: "signin_with", width: 280 }
+            );
+            gsiRendered = true;
+        }
+
+        document.getElementById("consent-check").addEventListener("change", function (e) {
+            if (e.target.checked) {
+                renderGsiButton();
+                show("gsi-button-holder");
+            } else {
+                hide("gsi-button-holder");
+            }
+        });
+
+        function showResult(html, cls) {
+            var box = document.getElementById("step-result");
+            box.innerHTML = '<div class="status-box ' + cls + '">' + html + "</div>";
+            show("step-result");
+        }
+
+        document.getElementById("delete-btn").addEventListener("click", function () {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = "Deleting…";
+
+            // Exchange the Google credential for a session, then delete the
+            // account. If the Google account never had a BubbleNest account the
+            // exchange creates one — the DELETE below removes it either way.
+            fetch("/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id_token: idToken })
+            })
+                .then(function (r) {
+                    if (!r.ok) throw new Error("sign-in exchange failed (" + r.status + ")");
+                    return r.json();
+                })
+                .then(function (auth) {
+                    return fetch("/api/profile", {
+                        method: "DELETE",
+                        headers: { "Authorization": "Bearer " + auth.token }
+                    }).then(function (r) {
+                        if (!r.ok) throw new Error("deletion failed (" + r.status + ")");
+                        return auth;
+                    });
+                })
+                .then(function (auth) {
+                    hide("step-confirm");
+                    if (auth.is_new_user) {
+                        showResult("No BubbleNest account existed for this Google account, so there was nothing to delete. The sign-in record created just now was removed as well.", "status-success");
+                    } else {
+                        showResult("<strong>Your account has been permanently deleted.</strong> All your data has been removed from our servers. We're sorry to see you go.", "status-success");
+                    }
+                })
+                .catch(function (err) {
+                    btn.disabled = false;
+                    btn.textContent = "Permanently delete my account";
+                    showResult("Something went wrong: " + err.message + '. Please try again, or email <a href="mailto:info.krylabs@gmail.com?subject=Delete%20my%20BubbleNest%20account">info.krylabs@gmail.com</a> and we will delete your account for you.', "status-error");
+                });
+        });
+    </script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="if(document.getElementById('consent-check').checked){renderGsiButton();document.getElementById('gsi-button-holder').classList.remove('hidden');}"></script>
+</body>
+</html>

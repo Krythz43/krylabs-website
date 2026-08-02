@@ -1,0 +1,26 @@
+---
+// Uniform work card — used for both iOS apps (image icon) and products (emoji icon).
+import Tag from './Tag.astro';
+const { icon, emoji, tag, title, subtitle, desc, links = [], badge } = Astro.props;
+---
+<article class="card" data-reveal-item>
+  {badge && <span class="card__badge">{badge}</span>}
+  <div class="card__top">
+    {icon
+      ? <img class="card__icon" src={icon} alt={`${title} app icon`} width="54" height="54" loading="lazy" />
+      : <div class="card__icon card__icon--emoji" aria-hidden="true">{emoji}</div>}
+    <Tag label={tag} />
+  </div>
+  <h3 class="card__title">{title}</h3>
+  <p class="card__sub">{subtitle}</p>
+  <p class="card__desc">{desc}</p>
+  <div class="card__links">
+    {links.map((l) => (
+      <a
+        href={l.href}
+        class={l.muted ? 'link link--ext' : 'link'}
+        {...(l.external ? { target: '_blank', rel: 'noopener' } : {})}
+      >{l.label}{l.external ? ' ↗' : ''}</a>
+    ))}
+  </div>
+</article>

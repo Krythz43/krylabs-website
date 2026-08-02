@@ -1,0 +1,12 @@
+---
+// Inner-page hero (about / reelmark / 404). title & lead may contain inline markup.
+const { eyebrow, title, lead } = Astro.props;
+---
+<section class="subhero">
+  <div class="container">
+    <p class="eyebrow" data-reveal>{eyebrow}</p>
+    <h1 class="subhero__title mask" data-mask><span class="mask-inner" set:html={title} /></h1>
+    {lead && <p class="subhero__lead" data-reveal set:html={lead} />}
+    <slot name="actions" />
+  </div>
+</section>

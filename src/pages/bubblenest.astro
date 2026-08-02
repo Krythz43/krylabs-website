@@ -1,0 +1,73 @@
+---
+// BubbleNest landing — the app-info page the homepage card links to.
+// Same design system as /reelmark; replaces the legacy static/bubblenest.html.
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Feature from '../components/Feature.astro';
+
+const features = [
+  { t: 'Bubbles', d: 'Share your current mood, activity, or interest as a bubble — and find the people who catch onto it. Posting is always free and unlimited.' },
+  { t: 'Vibes before faces', d: 'Profiles stay anonymous before matching, so conversations start from shared vibes — not photos. (Xtreme members can peek early.)' },
+  { t: 'Retain what matters', d: 'After you match, conversations expire unless both of you choose to retain them. Intentional connections, not endless inboxes.' },
+  { t: 'Real-time chat', d: 'Chat with your matches instantly and keep conversations flowing naturally in a safe environment.' },
+  { t: 'Communities', d: 'Join communities around what you love and post bubbles straight into them — your tribe is already talking.' },
+  { t: 'Safe, secure & 18+', d: 'An adults-only community with in-app reporting and blocking, and privacy as a default: no stored location, no stored email.' },
+];
+
+const legal = [
+  { t: 'Privacy Policy', d: 'What we collect, what we deliberately don’t, and how deletion works.', href: '/privacy' },
+  { t: 'Terms of Service', d: 'The rules of the nest — conduct, purchases, and everything between.', href: '/terms' },
+  { t: 'Delete your account', d: 'Self-service deletion — in the app or right from the browser.', href: '/bubblenest/delete-account' },
+  { t: 'Child Safety Standards', d: 'Our published CSAE standards, enforcement, and point of contact.', href: '/bubblenest/child-safety' },
+];
+---
+
+<Base
+  title="BubbleNest — Friend-Finding App | Krylabs"
+  description="Make friends through what you're into right now. Post a bubble, find like-minded people, and turn shared vibes into real friendships. iOS today, Android coming soon."
+>
+  <PageHero
+    eyebrow="iOS App · BubbleNest"
+    title="Find your perfect <em>vibe</em>."
+    lead="Make friends through what you're into right now. Post a bubble — &ldquo;anyone up for coffee?&rdquo;, a song you can't stop playing, a rant that needs company — and connect with the people who feel it too. On iPhone today; Android is coming soon."
+  >
+    <div slot="actions" class="subhero__actions" data-reveal>
+      <a href="https://apps.apple.com/in/app/bubblenest-friend-finding-app/id6743532224" class="btn" target="_blank" rel="noopener">Download on the App Store ↗</a>
+      <a href="#features" class="btn btn--ghost">See what's inside</a>
+    </div>
+  </PageHero>
+
+  <section class="section section--soft" id="features">
+    <div class="container">
+      <SectionHead eyebrow="What's inside" title="Friendship, one bubble at a time." />
+      <div class="features" data-reveal-group>
+        {features.map((f) => <Feature title={f.t} body={f.d} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="statement" data-reveal>
+        Meeting people shouldn't start with a photo grid. On BubbleNest it starts with
+        <em>&ldquo;me too!&rdquo;</em>
+      </p>
+      <p class="statement__sub" data-reveal>Post what you're up to, find your people, and let shared vibes do the introductions.</p>
+    </div>
+  </section>
+
+  <section class="section section--soft" id="legal">
+    <div class="container">
+      <SectionHead eyebrow="Your account, your rules" title="The fine print, findable." />
+      <div class="features" data-reveal-group>
+        {legal.map((l) => (
+          <div class="feature" data-reveal-item>
+            <h3><a class="link" href={l.href}>{l.t}</a></h3>
+            <p>{l.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

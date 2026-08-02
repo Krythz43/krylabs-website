@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.astro/
+
+# Env / secrets — this repo is public; nothing of the sort should ever land here.
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

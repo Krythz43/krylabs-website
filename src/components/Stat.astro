@@ -1,0 +1,9 @@
+---
+// Animated count-up stat (social proof). Renders the final value for no-JS /
+// reduced-motion; the motion layer counts it up from 0 on scroll.
+const { value, suffix = '', label } = Astro.props;
+---
+<div class="stat" data-reveal-item>
+  <div class="stat__num" data-count={value} data-suffix={suffix}>{value}{suffix}</div>
+  <div class="stat__label">{label}</div>
+</div>

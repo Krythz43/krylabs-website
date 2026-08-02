@@ -1,0 +1,12 @@
+---
+// Review / testimonial card. Use REAL App Store reviews — do not fabricate.
+const { quote, author, meta } = Astro.props;
+---
+<figure class="quote" data-reveal-item>
+  <div class="quote__stars" aria-hidden="true">★★★★★</div>
+  <blockquote class="quote__text">{quote}</blockquote>
+  <figcaption class="quote__by">
+    <span class="quote__author">{author}</span>
+    <span class="quote__meta">{meta}</span>
+  </figcaption>
+</figure>

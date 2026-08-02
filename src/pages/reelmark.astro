@@ -1,0 +1,63 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Feature from '../components/Feature.astro';
+
+const how = [
+  { t: 'Share from Instagram', d: 'Found a reel you love? Tap share, then "Send to" and pick ReelMark. The same way you\'d share with a friend.' },
+  { t: 'Or paste a link', d: 'You can also copy the reel link and paste it in the app. Whatever feels easier for you.' },
+  { t: 'Save it', d: 'Download to your phone and keep it forever. Watch offline, share with friends, or just have it ready whenever you want.' },
+  { t: 'Your collection, organized', d: 'All your saved reels in one place. Easy to find, easy to browse, easy to enjoy again.' },
+  { t: 'Works with public reels', d: 'If you can see it on Instagram, you can save it here. Recipes, tutorials, cute animals — all the good stuff.' },
+  { t: 'Quick and simple', d: 'No complicated steps. No confusing menus. Just save what you like and get back to scrolling.' },
+];
+
+const support = [
+  { t: 'Email support', d: 'For any questions, issues, or feedback, reach out at info.krylabs@gmail.com. We typically respond within 24–48 hours.' },
+  { t: 'How do I save a reel?', d: 'Open Instagram, find the reel, tap share, select "Send to" and choose ReelMark. Or copy the reel link and paste it in the app.' },
+  { t: "Why won't a reel download?", d: 'Make sure the reel is from a public account — private account reels cannot be saved. Also check your internet connection and try again.' },
+  { t: 'Where are my saved reels?', d: "All saved reels appear in the app's main screen. Downloaded reels are also saved to your device's photo library for offline access." },
+];
+---
+
+<Base title="ReelMark — Bookmarks for Reels | Krylabs" description="Save Instagram reels to watch later. Share directly from Instagram with 'Send to'.">
+  <PageHero
+    eyebrow="iOS App · ReelMark"
+    title="Keep the reels you <em>love</em>."
+    lead="That recipe you want to try this weekend. The workout that actually looks fun. The video that makes you smile every time. Save them so they're always there when you need them — share straight from Instagram with &ldquo;Send to&rdquo;."
+  >
+    <div slot="actions" class="subhero__actions" data-reveal>
+      <a href="https://apps.apple.com/in/app/reelmark-bookmark-for-reels/id6758064805" class="btn" target="_blank" rel="noopener">Download on the App Store ↗</a>
+      <a href="#how" class="btn btn--ghost">See how it works</a>
+    </div>
+  </PageHero>
+
+  <section class="section section--soft" id="how">
+    <div class="container">
+      <SectionHead eyebrow="How it works" title="Save what you love in two taps." />
+      <div class="features" data-reveal-group>
+        {how.map((f) => <Feature title={f.t} body={f.d} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="statement" data-reveal>
+        Sometimes you find a reel and think <em>“I need to remember this.”</em> ReelMark makes
+        sure you actually do.
+      </p>
+      <p class="statement__sub" data-reveal>It's like bookmarking, but better — because you get to keep the video with you.</p>
+    </div>
+  </section>
+
+  <section class="section section--soft" id="support">
+    <div class="container">
+      <SectionHead eyebrow="Support" title="Questions? We're here." />
+      <div class="features" data-reveal-group>
+        {support.map((f) => <Feature title={f.t} body={f.d} />)}
+      </div>
+    </div>
+  </section>
+</Base>

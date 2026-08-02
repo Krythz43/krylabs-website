@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Feature from '../components/Feature.astro';
+
+const principles = [
+  { t: 'Built end to end', d: 'Every Krylabs product is designed, developed and shipped in-house — from the first sketch to the App Store listing.' },
+  { t: 'Small, sharp, independent', d: 'No agency overhead, no committees. One founder who cares about the details and ships.' },
+  { t: 'Solve real problems', d: 'We build things people actually reach for — tools that quietly make a day a little better.' },
+  { t: 'Craft over clutter', d: 'Clean interfaces, considered motion, and nothing that gets in the way of the point.' },
+];
+---
+
+<Base title="About — Krylabs" description="Krylabs is an independent app & product studio founded by Krithick Santhosh, based in Bangalore, India.">
+  <PageHero
+    eyebrow="About"
+    title="An independent studio that <em>ships</em>."
+    lead="Krylabs is a one-person studio founded by Krithick Santhosh, building iOS apps and web products end to end. Based in Bangalore, India."
+  />
+
+  <section class="section section--soft">
+    <div class="container">
+      <div class="founder">
+        <div class="founder__photo" data-reveal>
+          <img src="/assets/krithick-santhosh.jpg" alt="Krithick Santhosh — founder of Krylabs" />
+        </div>
+        <div class="founder__body" data-reveal>
+          <p class="founder__name">Krithick Santhosh</p>
+          <p class="founder__role">Founder &amp; Developer, Krylabs</p>
+          <p>
+            Krithick is an iOS engineer and the sole founder of Krylabs. With a background from
+            IIT Kharagpur and professional experience at companies like PhonePe and Blinkit, he
+            brings expertise in building high-quality mobile applications and web products.
+          </p>
+          <p>
+            Krylabs is where that experience turns into products — ReelMark, BubbleNest,
+            BlockBud and Cocotree AI on iOS, alongside web tools like Galentini, Comet and
+            LeadOven. Every one of them is independently designed, developed and published by
+            Krithick.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <SectionHead eyebrow="How we work" title="A few things we believe." />
+      <div class="features" data-reveal-group>
+        {principles.map((p) => <Feature title={p.t} body={p.d} />)}
+      </div>
+    </div>
+  </section>
+</Base>
