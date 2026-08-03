@@ -36,7 +36,6 @@
 			# Cloudflare routes by Host, so it must say api.krylabs.com and not the
 			# apex — otherwise the request loops straight back to this origin.
 			header_up Host api.krylabs.com
-			header_up X-Forwarded-Host {host}
 		}
 	}
 
