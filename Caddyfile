@@ -1,0 +1,60 @@
+# Production origin for krylabs.com on the always-on host (droplet leadoven-prod-blr1).
+#
+# Two jobs:
+#   1. Serve the built Astro site from ./dist.
+#   2. Keep the LEGACY API paths on the apex alive by proxying them onward to
+#      api.krylabs.com, which routes through the `bntunnel` tunnel to the Go API.
+#
+# Why (2) exists: shipped iOS/Android builds call https://krylabs.com/api/... and cannot be
+# updated retroactively — users update on their own schedule, or never. Moving krylabs.com
+# to this host without proxying those paths would break sign-in and chat for every existing
+# install. New app builds should call api.krylabs.com directly and skip this hop entirely.
+#
+# Caddy is used here rather than the repo's server.js because /api/ws is a real WebSocket
+# (chat, coder/websocket) and a static file server cannot proxy a protocol upgrade.
+# server.js remains the zero-dependency option for a static-only deployment.
+
+{
+	admin off
+	# TLS is terminated by Cloudflare; cloudflared reaches this over plain HTTP on loopback.
+	auto_https off
+}
+
+:3070 {
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/krylabs-website.log
+		format console
+	}
+
+	# Everything the Go API owns. Order matters only within this matcher — it is checked
+	# before the static handler, so /api/* never falls through to the file server.
+	@api path /api/* /auth/* /config /health /eventsweb /events /event-detail /_next/*
+	handle @api {
+		reverse_proxy https://api.krylabs.com {
+			# Cloudflare routes by Host, so it must say api.krylabs.com and not the
+			# apex — otherwise the request loops straight back to this origin.
+			header_up Host api.krylabs.com
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# The website itself. try_files reproduces Astro's `build.format: 'directory'` layout
+	# (/about -> /about/index.html) and the bare-filename links inside the mirrored
+	# blockbud/ and oneatatime/ sites.
+	handle {
+		root * /opt/krylabs-website/dist
+		try_files {path} {path}/index.html {path}.html
+		file_server
+	}
+
+	handle_errors {
+		@404 expression {err.status_code} == 404
+		handle @404 {
+			root * /opt/krylabs-website/dist
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
