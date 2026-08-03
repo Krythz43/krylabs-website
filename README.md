@@ -17,8 +17,15 @@ npm start          # production server → http://127.0.0.1:3070
 
 ## Hosting
 
-The site runs on the Krylabs VPS under PM2 as `krylabs-website`, listening on `127.0.0.1:3070`,
-fronted by the `bntunnel` cloudflared tunnel.
+The site runs under PM2 as `krylabs-website`, listening on `127.0.0.1:3070`, fronted by the
+`bntunnel` cloudflared tunnel.
+
+> ⚠️ **The origin is currently a laptop, not a server.** `bntunnel` runs on the ASUS TUF F15
+> (`magnolia`) and dials *out* to Cloudflare — so krylabs.com is only reachable while that machine
+> is awake. Powering it off **or just closing the lid** (logind defaults to suspend) takes the site
+> down until it resumes. There is no copy of the site anywhere else. Moving this repo to a real
+> always-on host is a `git clone && npm ci && npm run build && pm2 start server.js` plus an ingress
+> rule; the split was done partly to make that a small change.
 
 `krylabs.com` is **split across two origins**. Cloudflare tunnel ingress matches top-down, so a
 narrow API rule sits above the catch-all:
@@ -29,7 +36,7 @@ narrow API rule sits above the catch-all:
 | `/events`, `/event-detail`, `/_next` | `:8080` — BubbleNest events app |
 | everything else | `:3070` — **this repo** |
 
-The rules live in `~/.cloudflared/config.yml` on the VPS. After editing them, check the routing
+The rules live in `~/.cloudflared/config.yml` on the tunnel host. After editing them, check the routing
 with `cloudflared tunnel ingress validate` and `cloudflared tunnel ingress rule <url>`.
 
 ### Deploy
