@@ -17,36 +17,27 @@ npm start          # production server → http://127.0.0.1:3070
 
 ## Hosting
 
-The site runs under PM2 as `krylabs-website`, listening on `127.0.0.1:3070`, fronted by the
-`bntunnel` cloudflared tunnel.
+**The live site is on the droplet, not the laptop** (topology settled 2026-08-04):
 
-> ⚠️ **The origin is currently a laptop, not a server.** `bntunnel` runs on the ASUS TUF F15
-> (`magnolia`) and dials *out* to Cloudflare — so krylabs.com is only reachable while that machine
-> is awake. Powering it off **or just closing the lid** (logind defaults to suspend) takes the site
-> down until it resumes. There is no copy of the site anywhere else. Moving this repo to a real
-> always-on host is a `git clone && npm ci && npm run build && pm2 start server.js` plus an ingress
-> rule; the split was done partly to make that a small change.
-
-`krylabs.com` is **split across two origins**. Cloudflare tunnel ingress matches top-down, so a
-narrow API rule sits above the catch-all:
-
-| Path | Origin |
-| --- | --- |
-| `/api`, `/auth`, `/health`, `/config`, `/eventsweb` | `:8080` — MatchMyVibe-Backend (Go API) |
-| `/events`, `/event-detail`, `/_next` | `:8080` — BubbleNest events app |
-| everything else | `:3070` — **this repo** |
-
-The rules live in `~/.cloudflared/config.yml` on the tunnel host. After editing them, check the routing
-with `cloudflared tunnel ingress validate` and `cloudflared tunnel ingress rule <url>`.
+- `krylabs.com` + `www` CNAME to the `leadoven-prod` tunnel → droplet `leadoven-prod-blr1`
+  (ssh alias `leadoven`) → Caddy on `:3070` serving `/opt/krylabs-website/dist` (config: this
+  repo's `Caddyfile`).
+- The Caddy `@api` matcher proxies the legacy apex paths (`/api`, `/auth`, `/health`, `/config`,
+  `/eventsweb`, `/events`, `/event-detail`, `/_next`) onward to `api.krylabs.com`, which routes
+  through `bntunnel` to the Go API on the laptop (`magnolia`). Already-shipped app builds call the
+  apex and can't be updated retroactively; new builds call `api.krylabs.com` directly.
+- The laptop still runs `krylabs-website` under PM2 on `127.0.0.1:3070`, but nothing routes
+  public traffic to it — it is a warm spare, not the origin. Restarting it does **not** deploy.
 
 ### Deploy
 
 ```bash
-cd ~/krylabs-website
-git pull && npm ci && npm run build && pm2 restart krylabs-website
+git push                                                   # from wherever you edited
+ssh leadoven 'cd /opt/krylabs-website && git pull && npm run build'
 ```
 
-`dist/` is gitignored, so the build must run on the box before the restart.
+`dist/` is gitignored, so the build must run on the droplet. Caddy serves the files directly —
+no service restart needed. Add `npm ci` before the build if dependencies changed.
 
 ## Structure
 
