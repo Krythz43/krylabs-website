@@ -1,12 +1,20 @@
 ---
 // /bubblenest/download — one link to hand out anywhere; it lands each visitor in the
-// right store. Deliberately NOT wrapped in Base.astro: the whole point is that a phone
-// never renders this page, so it must not pull in the layout's fonts, Lenis and GSAP
-// before it can bounce. Everything below is self-contained and the redirect fires from
-// an inline head script, before any stylesheet or font request resolves.
+// right store. Deliberately NOT wrapped in Base.astro: this page has to be usable in the
+// first frame, so it cannot wait on the layout's Lenis + GSAP bundle.
 //
-// Desktop (and anything unrecognised) falls through to the chooser below rather than
-// guessing — a wrong guess sends someone to a store page they cannot install from.
+// The page ALWAYS renders its chooser first and only then navigates. The obvious design —
+// location.replace() from an inline head script — was live briefly and broke: starting a
+// navigation mid-parse means the body never renders, so Safari showed a white flash and
+// Instagram's in-app webview, which blocks automatic cross-origin hops, showed a white
+// page forever with no way out. Rendering first makes a blocked redirect a no-op: the
+// visitor is already looking at two working buttons.
+//
+// Known in-app browsers therefore skip the automatic hop entirely and get a one-tap
+// button instead — a tap carries the user gesture those webviews require.
+//
+// Desktop and anything unrecognised get the plain chooser: a wrong guess sends someone to
+// a store they cannot install from, which is worse than one extra tap.
 const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
 ---
@@ -29,51 +37,14 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
     <meta property="og:description" content="Make friends through what you're into right now. Free on iPhone and Android." />
     <meta property="og:url" content="https://krylabs.com/bubblenest/download" />
     <meta name="twitter:card" content="summary_large_image" />
-    <!-- Same faces as the rest of the site. Costs a phone nothing: the redirect below is
-         an inline script, so it fires before this request is even dispatched. -->
+    <!-- Webfonts are a progressive nicety; font-display:swap keeps them off the critical
+         path so the buttons are readable (in fallback faces) in the first paint. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
-
-    <script is:inline define:vars={{ IOS_URL, ANDROID_URL }}>
-      (function () {
-        var ua = navigator.userAgent || '';
-        var params = new URLSearchParams(location.search);
-
-        // ?platform=ios|android forces a destination (QR codes printed per-platform,
-        // support links); ?stay=1 shows the chooser so the page itself can be reviewed.
-        var forced = (params.get('platform') || '').toLowerCase();
-        var stay = params.has('stay');
-
-        // Windows Phone's UA contained "Android" for compatibility — exclude it.
-        var isAndroid = /android/i.test(ua) && !/windows phone/i.test(ua);
-        // iPadOS 13+ reports itself as a Mac; the touch-point count is what separates them.
-        var isIOS =
-          /iphone|ipod|ipad/i.test(ua) ||
-          (/macintosh/i.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1);
-
-        var wantsAndroid = forced === 'android' || (!forced && isAndroid);
-        var wantsIOS = forced === 'ios' || (!forced && !isAndroid && isIOS);
-
-        if (stay || (!wantsAndroid && !wantsIOS)) return; // desktop / unknown → render the chooser
-
-        var target = wantsAndroid ? ANDROID_URL : IOS_URL;
-
-        // Campaign attribution rides along when present, in each store's own dialect.
-        var ref = params.get('ref');
-        if (ref) {
-          var sep = target.indexOf('?') === -1 ? '?' : '&';
-          target += sep + (wantsAndroid ? 'referrer' : 'ct') + '=' + encodeURIComponent(ref);
-        }
-
-        // replace(), not assign() — Back should return to wherever the link was tapped,
-        // not to this page, which would immediately bounce forward again.
-        location.replace(target);
-      })();
-    </script>
 
     <style>
       :root {
@@ -84,6 +55,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
         --line: #e6e4dc;
         --card: #ffffff;
         --accent: #bf4d2e;
+        --accent-soft: #f6ebe4;
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html { -webkit-font-smoothing: antialiased; }
@@ -122,7 +94,8 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       h1 em { font-style: italic; color: var(--accent); }
       .lead { color: var(--ink-3); margin-bottom: 30px; }
 
-      .stores { display: grid; gap: 12px; }
+      /* Column order matters: JS promotes the visitor's own store to the top. */
+      .stores { display: flex; flex-direction: column; gap: 12px; }
       .store {
         display: flex;
         align-items: center;
@@ -140,9 +113,22 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       .store span { display: block; font-size: 0.85rem; color: var(--muted); }
       .store .go { margin-left: auto; color: var(--muted); }
 
-      .note { margin-top: 26px; font-size: 0.86rem; color: var(--muted); }
-      .note a { border-bottom: 1px solid var(--line); }
-      .note a:hover { border-color: var(--ink); }
+      /* The store we detected — pulled to the top and given the accent treatment. */
+      .store.is-primary {
+        order: -1;
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .store.is-primary .go { color: var(--accent); }
+
+      .status {
+        margin-top: 26px;
+        font-size: 0.86rem;
+        color: var(--muted);
+        min-height: 1.6em; /* reserve the line so swapping the copy never shifts layout */
+      }
+      .status a { border-bottom: 1px solid var(--line); }
+      .status a:hover { border-color: var(--ink); }
     </style>
   </head>
   <body>
@@ -152,7 +138,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       <p class="lead">Make friends through what you're into right now. Free on iPhone and Android.</p>
 
       <div class="stores">
-        <a class="store" href={IOS_URL} rel="noopener">
+        <a class="store" id="store-ios" href={IOS_URL} rel="noopener">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.7 1.1 8.9.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7 2-1.1 2.7-2.1c.9-1.2 1.2-2.4 1.2-2.4s-2.4-.9-2.4-3.7zM14.2 5.9c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 0 2.1-.5 2.7-1.3z"/>
           </svg>
@@ -163,7 +149,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
           <span class="go" aria-hidden="true">↗</span>
         </a>
 
-        <a class="store" href={ANDROID_URL} rel="noopener">
+        <a class="store" id="store-android" href={ANDROID_URL} rel="noopener">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M3.6 2.2a1 1 0 0 0-.5.9v17.8a1 1 0 0 0 .5.9l9.4-9.8L3.6 2.2zm11 8.1L5.4 1.6l10 5.7-1.8 3zM5.4 22.4l9.2-8.7 1.8 3-10 5.7zm11.9-6.7-2-3.3 2-3.3 3.6 2c.7.4.7 1.4 0 1.8l-3.6 2.8z"/>
           </svg>
@@ -175,7 +161,80 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
         </a>
       </div>
 
-      <p class="note">On a phone? This page normally sends you straight to your store. <a href="/bubblenest">Learn more about BubbleNest</a></p>
+      <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
     </main>
+
+    <script is:inline define:vars={{ IOS_URL, ANDROID_URL }}>
+      (function () {
+        var ua = navigator.userAgent || '';
+        var params = new URLSearchParams(location.search);
+
+        // ?platform=ios|android forces a destination (per-platform QR codes, support
+        // links); ?stay=1 suppresses the hop so the page itself can be reviewed.
+        var forced = (params.get('platform') || '').toLowerCase();
+        var stay = params.has('stay');
+
+        // Windows Phone's UA contained "Android" for compatibility — exclude it.
+        var isAndroid = /android/i.test(ua) && !/windows phone/i.test(ua);
+        // iPadOS 13+ reports itself as a Mac; the touch-point count is what separates them.
+        var isIOS =
+          /iphone|ipod|ipad/i.test(ua) ||
+          (/macintosh/i.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1);
+
+        var wantsAndroid = forced === 'android' || (!forced && isAndroid);
+        var wantsIOS = forced === 'ios' || (!forced && !isAndroid && isIOS);
+        if (!wantsAndroid && !wantsIOS) return; // desktop / unknown → plain chooser
+
+        // Social apps' embedded webviews. They routinely refuse a script-initiated hop to
+        // a store URL but honour the identical link when the user taps it, so they get the
+        // button treatment instead of a redirect that would silently do nothing.
+        var inApp = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|TikTok|musical_ly|Bytedance|Twitter|LinkedInApp|Pinterest|Line\/|WhatsApp|MicroMessenger|KAKAOTALK|GSA\//i.test(ua);
+
+        var target = wantsAndroid ? ANDROID_URL : IOS_URL;
+        var storeName = wantsAndroid ? 'Google Play' : 'the App Store';
+
+        // Campaign attribution rides along when present, in each store's own dialect.
+        var ref = params.get('ref');
+        if (ref) {
+          var sep = target.indexOf('?') === -1 ? '?' : '&';
+          target += sep + (wantsAndroid ? 'referrer' : 'ct') + '=' + encodeURIComponent(ref);
+        }
+
+        // Promote the visitor's store: first in the column, accent-styled, and carrying
+        // any ?ref attribution the automatic hop would have added.
+        var primary = document.getElementById(wantsAndroid ? 'store-android' : 'store-ios');
+        var status = document.getElementById('status');
+        if (primary) {
+          primary.className += ' is-primary';
+          primary.href = target;
+        }
+
+        if (stay) return;
+
+        if (inApp) {
+          if (status) status.textContent = 'Tap above to open ' + storeName + '.';
+          return;
+        }
+
+        if (status) status.textContent = 'Opening ' + storeName + '…';
+
+        // Two frames, then hop: the first callback runs before the first paint, the second
+        // after it. Navigating only once something is on screen is what keeps a blocked or
+        // slow redirect from leaving a blank page.
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            // replace(), not assign() — Back should return to wherever the link was
+            // tapped, not to this page, which would immediately bounce forward again.
+            location.replace(target);
+
+            // Still here a beat later? The hop was refused. Say so instead of leaving
+            // "Opening…" on screen forever above two buttons that do work.
+            setTimeout(function () {
+              if (status) status.textContent = 'Tap above to open ' + storeName + '.';
+            }, 2500);
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
