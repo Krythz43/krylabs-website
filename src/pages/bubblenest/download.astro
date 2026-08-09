@@ -29,6 +29,14 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
     <meta property="og:description" content="Make friends through what you're into right now. Free on iPhone and Android." />
     <meta property="og:url" content="https://krylabs.com/bubblenest/download" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- Same faces as the rest of the site. Costs a phone nothing: the redirect below is
+         an inline script, so it fires before this request is even dispatched. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
 
     <script is:inline define:vars={{ IOS_URL, ANDROID_URL }}>
       (function () {
