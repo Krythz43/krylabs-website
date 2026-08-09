@@ -23,6 +23,11 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
 // button dies in Instagram while Google Play works: play.google.com returns a real page,
 // Apple returns a scheme the webview cannot load.
 const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
+// Hands the URL to Safari, where the universal link resolves into the App Store normally.
+// Per the in-app-browser compatibility matrix (github.com/shalanah/inapp-debugger), this
+// escape works in Instagram on iOS *only when invoked via window.open* — assigning it to
+// location.href, which is the obvious way to write it, is precisely the form that fails.
+const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
 ---
 
 <!doctype html>
@@ -225,7 +230,7 @@ const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-findin
       <pre class="debug" id="debug" hidden></pre>
     </main>
 
-    <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL }}>
+    <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL, IOS_SAFARI_ESCAPE_URL }}>
       (function () {
         var ua = navigator.userAgent || '';
         var params = new URLSearchParams(location.search);
@@ -345,23 +350,31 @@ const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-findin
             if (document.hidden) left = true;
           });
 
-          link.addEventListener('click', function () {
+          link.addEventListener('click', function (e) {
             // Only departures from here on count as success — armed per tap, not once.
             left = false;
-            log('tap → ' + schemeUrl);
 
-            // One long-shot, then the truth. x-safari-https:// used to force the system
-            // browser and is still worth a try in TikTok/Facebook, but it is undocumented
-            // and reported broken in Instagram, so nothing is built on it. Escalating to
-            // https://apps.apple.com would be pointless — that URL 301s straight back to
-            // the scheme that just failed.
+            // window.open, NOT location.href, and called synchronously inside the tap so
+            // the user gesture is still live — that combination is the one documented to
+            // escape Instagram on iOS. Everything after this is a fallback.
+            e.preventDefault();
+            var opened = null;
+            try {
+              opened = window.open(IOS_SAFARI_ESCAPE_URL, '_blank');
+            } catch (err) {
+              log('window.open threw: ' + err);
+            }
+            log('tap → window.open(' + IOS_SAFARI_ESCAPE_URL + ') returned ' + (opened ? 'a window' : 'null'));
+
             setTimeout(function () {
-              if (departed()) { log('departed — the App Store opened'); return; }
-              log('scheme refused → trying x-safari-https:// (long shot)');
-              location.href = 'x-safari-' + target;
+              if (departed()) { log('departed — Safari took over'); return; }
+              // Escaping failed; ask iOS directly. Note there is no point escalating to
+              // https://apps.apple.com — that URL 301s back to this very scheme.
+              log('no escape → ' + schemeUrl);
+              location.href = schemeUrl;
 
               setTimeout(function () {
-                if (departed()) { log('departed — Safari took over'); return; }
+                if (departed()) { log('departed — the App Store opened'); return; }
                 log('blocked — showing the menu instructions');
                 if (statusEl) statusEl.textContent = 'This browser is blocking the App Store.';
                 showRescue(true);
