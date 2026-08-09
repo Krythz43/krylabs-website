@@ -17,8 +17,12 @@
 // a store they cannot install from, which is worse than one extra tap.
 const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
-// Non-http scheme, used only inside in-app webviews — see the click handler below.
-const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
+// Not a guess: this is verbatim what apps.apple.com 301s an iPhone user-agent to. Apple
+// serves NO html for an app page on iOS — every URL form (with locale, without, itunes.com,
+// ?mt=8) answers an iPhone UA with this scheme. That is the whole reason the App Store
+// button dies in Instagram while Google Play works: play.google.com returns a real page,
+// Apple returns a scheme the webview cannot load.
+const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
 ---
 
 <!doctype html>
@@ -143,6 +147,12 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
          Hidden until something has actually failed, so it never adds noise. */
       .rescue { margin-top: 14px; }
       .rescue[hidden] { display: none; }
+      .rescue__hint {
+        font-size: 0.86rem;
+        color: var(--ink-3);
+        margin-bottom: 10px;
+      }
+      .rescue__hint b { font-weight: 600; color: var(--ink); white-space: nowrap; }
       .rescue button {
         font: inherit;
         font-size: 0.86rem;
@@ -208,6 +218,7 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
       <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
 
       <div class="rescue" id="rescue" hidden>
+        <p class="rescue__hint" id="rescue-hint"></p>
         <button type="button" id="copy">Copy link</button>
       </div>
 
@@ -278,13 +289,19 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         if (inApp) {
           log('in-app webview → no auto-hop; promoted ' + storeName);
           if (status) status.textContent = 'Tap above to open ' + storeName + '.';
-          // Carry ?ref onto the scheme URL too, so in-app taps stay attributed.
+          // Only iOS needs the special handling: play.google.com is an ordinary page that
+          // these webviews render happily, which is exactly why Android already worked.
           if (wantsIOS && primary) {
+            // Carry ?ref onto the scheme URL too, so in-app taps stay attributed.
             enableInAppAppStoreTap(
               primary,
               status,
               IOS_SCHEME_URL + (ref ? '?ct=' + encodeURIComponent(ref) : '')
             );
+            // Surfaced up front, not held back until after a failure: Apple hands iOS
+            // nothing but a scheme, so a blocked tap is the likely case here, not the
+            // exception, and a silent button with no way out is what started all this.
+            showRescue(false);
           }
           return;
         }
@@ -328,57 +345,48 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
             if (document.hidden) left = true;
           });
 
-          // Each rung waits, checks whether we are still here, then tries the next route.
-          function escalate(steps, i) {
-            if (i >= steps.length) return;
-            var step = steps[i];
-            setTimeout(function () {
-              if (departed()) { log('departed — the store opened'); return; }
-              log('still here → ' + step.label);
-              step.run();
-              escalate(steps, i + 1);
-            }, step.wait);
-          }
-
           link.addEventListener('click', function () {
             // Only departures from here on count as success — armed per tap, not once.
             left = false;
             log('tap → ' + schemeUrl);
 
-            escalate([
-              {
-                wait: 900,
-                label: 'x-safari-https:// (force the system browser)',
-                // Unknown schemes get handed to iOS by most in-app webviews, and iOS maps
-                // this one to Safari, where the universal link resolves normally.
-                run: function () { location.href = 'x-safari-' + target; },
-              },
-              {
-                wait: 900,
-                label: 'https://apps.apple.com (renders the listing at worst)',
-                run: function () { location.href = target; },
-              },
-              {
-                wait: 1200,
-                label: 'give up → copy-link rescue',
-                run: function () {
-                  if (statusEl) {
-                    statusEl.textContent =
-                      'This in-app browser is blocking the App Store. Copy the link and open it in Safari.';
-                  }
-                  showRescue();
-                },
-              },
-            ], 0);
+            // One long-shot, then the truth. x-safari-https:// used to force the system
+            // browser and is still worth a try in TikTok/Facebook, but it is undocumented
+            // and reported broken in Instagram, so nothing is built on it. Escalating to
+            // https://apps.apple.com would be pointless — that URL 301s straight back to
+            // the scheme that just failed.
+            setTimeout(function () {
+              if (departed()) { log('departed — the App Store opened'); return; }
+              log('scheme refused → trying x-safari-https:// (long shot)');
+              location.href = 'x-safari-' + target;
+
+              setTimeout(function () {
+                if (departed()) { log('departed — Safari took over'); return; }
+                log('blocked — showing the menu instructions');
+                if (statusEl) statusEl.textContent = 'This browser is blocking the App Store.';
+                showRescue(true);
+              }, 1200);
+            }, 1000);
           });
         }
 
-        // Last resort: hand over the URL so it can be pasted into a real browser.
-        function showRescue() {
+        // The only route that works every time in these webviews is the host app's own
+        // "open in external browser" menu — every automatic escape is undocumented and
+        // gets patched. So say it plainly, and offer the URL for pasting as a backstop.
+        // `urgent` promotes it from a quiet hint to the actual instruction after a
+        // blocked tap.
+        function showRescue(urgent) {
           var rescue = document.getElementById('rescue');
           var copy = document.getElementById('copy');
+          var hint = document.getElementById('rescue-hint');
           if (!rescue || !copy) return;
           rescue.hidden = false;
+          if (hint) {
+            hint.innerHTML = (urgent ? 'Open it in Safari instead: tap ' : 'Not opening? Tap ') +
+              '<b>•••</b> at the top right, then <b>Open in external browser</b>.';
+          }
+          if (rescue.dataset && rescue.dataset.wired) return; // don't double-bind the button
+          if (rescue.dataset) rescue.dataset.wired = '1';
           copy.addEventListener('click', function () {
             var url = 'https://krylabs.com/bubblenest/download';
             function done() { copy.textContent = 'Link copied'; }
