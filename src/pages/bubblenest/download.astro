@@ -222,7 +222,14 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
 
         if (inApp) {
           if (status) status.textContent = 'Tap above to open ' + storeName + '.';
-          if (wantsIOS && primary) enableInAppAppStoreTap(primary, status);
+          // Carry ?ref onto the scheme URL too, so in-app taps stay attributed.
+          if (wantsIOS && primary) {
+            enableInAppAppStoreTap(
+              primary,
+              status,
+              IOS_SCHEME_URL + (ref ? '?ct=' + encodeURIComponent(ref) : '')
+            );
+          }
           return;
         }
 
@@ -251,8 +258,8 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         // to the system). The itms-apps:// scheme is a non-http URL, which these webviews
         // do forward to iOS, and firing it from inside the tap preserves the user gesture
         // they require. Everything escalates from there, so no tap can dead-end.
-        function enableInAppAppStoreTap(link, statusEl) {
-          link.setAttribute('href', IOS_SCHEME_URL);
+        function enableInAppAppStoreTap(link, statusEl, schemeUrl) {
+          link.setAttribute('href', schemeUrl);
 
           // If the App Store opens, this document is backgrounded — that is how we tell
           // "it worked" from "the webview ate it" and avoid escalating over a success.
@@ -269,8 +276,8 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
             setTimeout(function () {
               if (departed()) return;
               // Scheme refused too — try Apple's web page, which at worst renders the
-              // listing inside the webview.
-              location.href = IOS_URL;
+              // listing inside the webview. `target` carries any ?ref attribution.
+              location.href = target;
               setTimeout(function () {
                 if (departed()) return;
                 if (statusEl) {
