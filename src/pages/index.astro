@@ -19,9 +19,12 @@ const iosApps = [
     icon: '/assets/icons/bubblenest.jpg',
     name: 'BubbleNest',
     sub: 'Friend-Finding App',
+    tag: 'iOS & Android',
     desc: "Make friends through what you're into right now. Post a bubble, find like-minded people nearby, and turn shared vibes into real plans.",
     learn: '/bubblenest',
-    store: 'https://apps.apple.com/in/app/bubblenest-friend-finding-app/id6743532224',
+    // Live on both stores — /bubblenest/download picks the right one per device.
+    store: '/bubblenest/download',
+    storeLabel: 'Download',
   },
   {
     icon: '/assets/icons/blockbud.jpg',
@@ -132,20 +135,24 @@ const showReviews = false; // flip to true once real App Store reviews are added
         lead="Everything here is independently designed, developed and published by Krithick Santhosh under Krylabs."
       />
 
-      <p class="group-label" data-reveal>iOS Apps</p>
+      <!-- "Mobile" rather than "iOS": BubbleNest ships on Play too, and each card
+           carries its own platform tag. -->
+      <p class="group-label" data-reveal>Mobile Apps</p>
       <div class="grid" data-reveal-group>
         {iosApps.map((a) => (
           <Card
             icon={a.icon}
             emoji={a.emoji}
-            tag="iOS App"
+            tag={a.tag ?? 'iOS App'}
             title={a.name}
             subtitle={a.sub}
             desc={a.desc}
             badge={a.badge}
             links={[
               ...(a.learn ? [{ href: a.learn, label: 'Learn more' }] : []),
-              ...(a.store ? [{ href: a.store, label: 'App Store', muted: true, external: true }] : []),
+              // Cross-platform apps point at their own /download splitter instead of one
+              // store, so the label and the external-link treatment follow the href.
+              ...(a.store ? [{ href: a.store, label: a.storeLabel ?? 'App Store', muted: true, external: !a.store.startsWith('/') }] : []),
             ]}
           />
         ))}

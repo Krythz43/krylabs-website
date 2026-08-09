@@ -5,7 +5,8 @@ import sitemap from '@astrojs/sitemap';
 // Astro builds to static HTML in ./dist, which the Go backend serves.
 export default defineConfig({
   site: 'https://krylabs.com',
-  integrations: [sitemap()],
+  // /bubblenest/download is a store-redirect stub, not a page worth indexing.
+  integrations: [sitemap({ filter: (page) => !page.includes('/bubblenest/download') })],
   // Dev-only toolbar pill clutters screenshots and is never in the static build.
   devToolbar: { enabled: false },
   build: {
