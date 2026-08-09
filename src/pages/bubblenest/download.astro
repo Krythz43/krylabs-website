@@ -17,6 +17,8 @@
 // a store they cannot install from, which is worse than one extra tap.
 const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
+// Non-http scheme, used only inside in-app webviews — see the click handler below.
+const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
 ---
 
 <!doctype html>
@@ -46,7 +48,12 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       rel="stylesheet"
     />
 
-    <style>
+    <!-- is:global is load-bearing. Scoped styles compile `* { padding: 0 }` into
+         `[data-astro-cid-…] { padding: 0 }` — an attribute selector that outranks plain
+         element selectors, so it silently beat `body { padding: 32px 24px }` and
+         `h1 { margin: … }`. That is why the cards ran edge-to-edge on a phone. This page
+         owns its whole document, so there is nothing to scope against anyway. -->
+    <style is:global>
       :root {
         --bg: #fbfbf9;
         --ink: #17160f;
@@ -61,9 +68,11 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       html { -webkit-font-smoothing: antialiased; }
       body {
         min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        /* Grid, not flex: as a flex item the card resolved its width against the wrong
+           box and spilled over the side padding, so the rows ran edge-to-edge on a
+           phone. A grid area respects the padding. */
+        display: grid;
+        place-items: center;
         padding: 32px 24px;
         background: var(--bg);
         color: var(--ink);
@@ -164,7 +173,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
       <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
     </main>
 
-    <script is:inline define:vars={{ IOS_URL, ANDROID_URL }}>
+    <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL }}>
       (function () {
         var ua = navigator.userAgent || '';
         var params = new URLSearchParams(location.search);
@@ -213,6 +222,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
 
         if (inApp) {
           if (status) status.textContent = 'Tap above to open ' + storeName + '.';
+          if (wantsIOS && primary) enableInAppAppStoreTap(primary, status);
           return;
         }
 
@@ -234,6 +244,43 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.b
             }, 2500);
           });
         });
+
+        // Instagram's iOS webview swallows a tap on https://apps.apple.com entirely — no
+        // navigation, no error, nothing (Google Play works in the same webview because it
+        // is an ordinary page; the Apple URL is a universal link the host app never hands
+        // to the system). The itms-apps:// scheme is a non-http URL, which these webviews
+        // do forward to iOS, and firing it from inside the tap preserves the user gesture
+        // they require. Everything escalates from there, so no tap can dead-end.
+        function enableInAppAppStoreTap(link, statusEl) {
+          link.setAttribute('href', IOS_SCHEME_URL);
+
+          // If the App Store opens, this document is backgrounded — that is how we tell
+          // "it worked" from "the webview ate it" and avoid escalating over a success.
+          var left = false;
+          function departed() { return left || document.hidden; }
+          window.addEventListener('pagehide', function () { left = true; });
+          window.addEventListener('blur', function () { left = true; });
+          document.addEventListener('visibilitychange', function () {
+            if (document.hidden) left = true;
+          });
+
+          link.addEventListener('click', function () {
+            // No preventDefault: the itms-apps:// navigation is the primary attempt.
+            setTimeout(function () {
+              if (departed()) return;
+              // Scheme refused too — try Apple's web page, which at worst renders the
+              // listing inside the webview.
+              location.href = IOS_URL;
+              setTimeout(function () {
+                if (departed()) return;
+                if (statusEl) {
+                  statusEl.textContent =
+                    'This in-app browser is blocking the App Store. Open this page in Safari to continue.';
+                }
+              }, 1400);
+            }, 1000);
+          });
+        }
       })();
     </script>
   </body>
