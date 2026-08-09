@@ -138,6 +138,41 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
       }
       .status a { border-bottom: 1px solid var(--line); }
       .status a:hover { border-color: var(--ink); }
+
+      /* Escape hatch for webviews that refuse every programmatic route to the store.
+         Hidden until something has actually failed, so it never adds noise. */
+      .rescue { margin-top: 14px; }
+      .rescue[hidden] { display: none; }
+      .rescue button {
+        font: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        color: var(--ink);
+        background: var(--card);
+        border: 1px solid var(--line-strong, #d8d6cc);
+        border-radius: 10px;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      .rescue button:active { background: var(--accent-soft); }
+
+      /* ?debug=1 — a readable dump of what the page decided and what it tried, so a
+         failure on someone else's phone can be reported instead of guessed at. */
+      .debug {
+        margin-top: 22px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        color: var(--ink-3);
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        text-align: left;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .debug[hidden] { display: none; }
     </style>
   </head>
   <body>
@@ -171,6 +206,12 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
       </div>
 
       <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
+
+      <div class="rescue" id="rescue" hidden>
+        <button type="button" id="copy">Copy link</button>
+      </div>
+
+      <pre class="debug" id="debug" hidden></pre>
     </main>
 
     <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL }}>
@@ -182,6 +223,17 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         // links); ?stay=1 suppresses the hop so the page itself can be reviewed.
         var forced = (params.get('platform') || '').toLowerCase();
         var stay = params.has('stay');
+
+        // ?debug=1 prints the decision and every attempt on screen. A store link that
+        // fails inside someone else's webview cannot be reproduced from here, so the
+        // page has to be able to report on itself.
+        var debugEl = params.has('debug') ? document.getElementById('debug') : null;
+        var t0 = Date.now();
+        function log(line) {
+          if (!debugEl) return;
+          debugEl.hidden = false;
+          debugEl.textContent += (debugEl.textContent ? '\n' : '') + '+' + (Date.now() - t0) + 'ms  ' + line;
+        }
 
         // Windows Phone's UA contained "Android" for compatibility — exclude it.
         var isAndroid = /android/i.test(ua) && !/windows phone/i.test(ua);
@@ -198,6 +250,9 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         // a store URL but honour the identical link when the user taps it, so they get the
         // button treatment instead of a redirect that would silently do nothing.
         var inApp = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|TikTok|musical_ly|Bytedance|Twitter|LinkedInApp|Pinterest|Line\/|WhatsApp|MicroMessenger|KAKAOTALK|GSA\//i.test(ua);
+
+        log('ua=' + ua);
+        log('isIOS=' + isIOS + ' isAndroid=' + isAndroid + ' inApp=' + inApp + ' forced=' + (forced || '—'));
 
         var target = wantsAndroid ? ANDROID_URL : IOS_URL;
         var storeName = wantsAndroid ? 'Google Play' : 'the App Store';
@@ -221,6 +276,7 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         if (stay) return;
 
         if (inApp) {
+          log('in-app webview → no auto-hop; promoted ' + storeName);
           if (status) status.textContent = 'Tap above to open ' + storeName + '.';
           // Carry ?ref onto the scheme URL too, so in-app taps stay attributed.
           if (wantsIOS && primary) {
@@ -234,6 +290,7 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         }
 
         if (status) status.textContent = 'Opening ' + storeName + '…';
+        log('auto-hop → ' + target);
 
         // Two frames, then hop: the first callback runs before the first paint, the second
         // after it. Navigating only once something is on screen is what keeps a blocked or
@@ -255,37 +312,99 @@ const IOS_SCHEME_URL = 'itms-apps://apps.apple.com/app/id6743532224';
         // Instagram's iOS webview swallows a tap on https://apps.apple.com entirely — no
         // navigation, no error, nothing (Google Play works in the same webview because it
         // is an ordinary page; the Apple URL is a universal link the host app never hands
-        // to the system). The itms-apps:// scheme is a non-http URL, which these webviews
-        // do forward to iOS, and firing it from inside the tap preserves the user gesture
-        // they require. Everything escalates from there, so no tap can dead-end.
+        // to the system). So a tap tries progressively less polite routes until one
+        // sticks, and ends at instructions rather than silence.
         function enableInAppAppStoreTap(link, statusEl, schemeUrl) {
           link.setAttribute('href', schemeUrl);
 
-          // If the App Store opens, this document is backgrounded — that is how we tell
-          // "it worked" from "the webview ate it" and avoid escalating over a success.
+          // If the App Store opens, this document is backgrounded — that is how a success
+          // is told from "the webview ate it". Deliberately NOT listening for `blur`: it
+          // fires on focus changes that are not departures, and an earlier version armed
+          // this flag before the tap ever happened, which disabled the whole chain.
           var left = false;
           function departed() { return left || document.hidden; }
           window.addEventListener('pagehide', function () { left = true; });
-          window.addEventListener('blur', function () { left = true; });
           document.addEventListener('visibilitychange', function () {
             if (document.hidden) left = true;
           });
 
-          link.addEventListener('click', function () {
-            // No preventDefault: the itms-apps:// navigation is the primary attempt.
+          // Each rung waits, checks whether we are still here, then tries the next route.
+          function escalate(steps, i) {
+            if (i >= steps.length) return;
+            var step = steps[i];
             setTimeout(function () {
-              if (departed()) return;
-              // Scheme refused too — try Apple's web page, which at worst renders the
-              // listing inside the webview. `target` carries any ?ref attribution.
-              location.href = target;
-              setTimeout(function () {
-                if (departed()) return;
-                if (statusEl) {
-                  statusEl.textContent =
-                    'This in-app browser is blocking the App Store. Open this page in Safari to continue.';
-                }
-              }, 1400);
-            }, 1000);
+              if (departed()) { log('departed — the store opened'); return; }
+              log('still here → ' + step.label);
+              step.run();
+              escalate(steps, i + 1);
+            }, step.wait);
+          }
+
+          link.addEventListener('click', function () {
+            // Only departures from here on count as success — armed per tap, not once.
+            left = false;
+            log('tap → ' + schemeUrl);
+
+            escalate([
+              {
+                wait: 900,
+                label: 'x-safari-https:// (force the system browser)',
+                // Unknown schemes get handed to iOS by most in-app webviews, and iOS maps
+                // this one to Safari, where the universal link resolves normally.
+                run: function () { location.href = 'x-safari-' + target; },
+              },
+              {
+                wait: 900,
+                label: 'https://apps.apple.com (renders the listing at worst)',
+                run: function () { location.href = target; },
+              },
+              {
+                wait: 1200,
+                label: 'give up → copy-link rescue',
+                run: function () {
+                  if (statusEl) {
+                    statusEl.textContent =
+                      'This in-app browser is blocking the App Store. Copy the link and open it in Safari.';
+                  }
+                  showRescue();
+                },
+              },
+            ], 0);
+          });
+        }
+
+        // Last resort: hand over the URL so it can be pasted into a real browser.
+        function showRescue() {
+          var rescue = document.getElementById('rescue');
+          var copy = document.getElementById('copy');
+          if (!rescue || !copy) return;
+          rescue.hidden = false;
+          copy.addEventListener('click', function () {
+            var url = 'https://krylabs.com/bubblenest/download';
+            function done() { copy.textContent = 'Link copied'; }
+            // execCommand is deprecated but is the only path in older in-app webviews —
+            // exactly the browsers that get this far.
+            function fallbackCopy() {
+              try {
+                var ta = document.createElement('textarea');
+                ta.value = url;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                done();
+              } catch (e) {
+                copy.textContent = 'krylabs.com/bubblenest/download';
+              }
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).then(done, fallbackCopy);
+            } else {
+              fallbackCopy();
+            }
           });
         }
       })();
