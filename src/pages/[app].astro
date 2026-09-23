@@ -1,0 +1,103 @@
+---
+// One page per app, at /<slug>. Copy comes from src/content/apps/<slug>.md; store facts
+// and screenshots from the committed App Store snapshot (npm run sync).
+import { Image, getImage } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Strip from '../components/Strip.astro';
+import Defs from '../components/Defs.astro';
+import AppFacts from '../components/AppFacts.astro';
+import { getApps, listingFor, primaryLink, sectionIds, shotsFor, PAGE_IDS, type App } from '../lib/apps';
+import { site, absolute } from '../lib/site';
+import { portraitUrl } from '../lib/portrait';
+import { softwareApplication, organization, person } from '../lib/jsonld';
+
+export async function getStaticPaths() {
+  return (await getApps()).map((app) => ({ params: { app: app.id }, props: { app } }));
+}
+
+interface Props {
+  app: App;
+}
+
+const { app } = Astro.props;
+const d = app.data;
+const store = listingFor(app);
+const shots = shotsFor(app);
+const primary = primaryLink(app, true);
+const ids = sectionIds(app);
+
+// The ghost button names the section it scrolls to: "See what's inside", "See how it works".
+const firstHeading = d.sections[0]?.heading;
+const insideLabel = firstHeading ? `See ${firstHeading.charAt(0).toLowerCase()}${firstHeading.slice(1)}` : null;
+
+// Screenshot URLs for structured data. 480px is a size the strip below already emits,
+// so this resolves to the same file and adds no transform.
+const screenshotUrls = await Promise.all(
+  shots.map(async ({ img }) => absolute((await getImage({ src: img, width: 480 })).src)),
+);
+
+const title = `${d.name}: ${d.tagline} | ${site.name}`;
+// The app plus the nodes it refers to by @id, so the graph resolves within this page.
+const jsonLd = [softwareApplication(app, store, screenshotUrls), organization(), person(await portraitUrl())];
+---
+
+<Base title={title} description={d.summary} ogImage={`/og/${app.id}.png`} jsonLd={jsonLd}>
+  <section class="page">
+    <div class="container">
+      <div class="page__id">
+        <Image class="page__icon" src={d.icon} alt="" width={128} height={128} loading="eager" />
+        <div>
+          <p class="page__name">{d.name}</p>
+          <p class="kicker">{d.tagline}</p>
+        </div>
+      </div>
+      <h1 class="display">{d.hero.title}</h1>
+      <p class="lead page__lead">{d.hero.lead}</p>
+      <div class="page__actions" id={PAGE_IDS.download}>
+        {primary && (
+          <a href={primary.href} class="btn" {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
+        )}
+        {insideLabel && <a href={`#${ids[0]}`} class="btn btn--ghost">{insideLabel}</a>}
+      </div>
+      <AppFacts app={app} long />
+      {shots.length > 0 && <Strip shots={shots} variant="page" eager={3} />}
+    </div>
+  </section>
+
+  {d.sections.map((s, i) => (
+    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={ids[i]}>
+      <div class="container">
+        <div class="section__head">
+          <h2 class="display">{s.heading}</h2>
+        </div>
+        <Defs items={s.items} numbered={s.numbered} />
+      </div>
+    </section>
+  ))}
+
+  {d.statement && (
+    <section class="section">
+      <div class="container">
+        <p class="display statement">{d.statement.text}</p>
+        {d.statement.sub && <p class="statement__sub">{d.statement.sub}</p>}
+      </div>
+    </section>
+  )}
+
+  <section class="section section--soft" id={PAGE_IDS.support}>
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Support{d.legal ? ' and the fine print' : ''}</h2>
+        <p class="kicker">
+          Questions about {d.name}? Email <a class="link" href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+      </div>
+      {d.legal && (
+        <div id={PAGE_IDS.legal}>
+          <span id={PAGE_IDS.privacy}></span>
+          <Defs items={d.legal} />
+        </div>
+      )}
+    </div>
+  </section>
+</Base>

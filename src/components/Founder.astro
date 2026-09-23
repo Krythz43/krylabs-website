@@ -1,0 +1,24 @@
+---
+// The founder block. `wide` is the full version for /about; the default is the short
+// version on the home page, which links to it.
+import { Image } from 'astro:assets';
+import photo from '../assets/krithick-santhosh.jpg';
+import { site } from '../lib/site';
+
+interface Props {
+  wide?: boolean;
+}
+
+const { wide = false } = Astro.props;
+---
+
+<div class={`founder${wide ? ' founder--wide' : ''}`}>
+  <div class="founder__photo">
+    <Image src={photo} alt={`${site.founder.name}, founder of ${site.name}`} width={520} widths={[260, 520]} sizes="(max-width: 760px) 200px, 260px" loading="lazy" />
+  </div>
+  <div class="founder__body">
+    <p class="founder__name">{site.founder.name}</p>
+    <p class="founder__role">{site.founder.role}, {site.name}</p>
+    <slot />
+  </div>
+</div>

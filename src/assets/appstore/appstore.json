@@ -1,0 +1,102 @@
+{
+  "syncedAt": "2026-09-23",
+  "apps": {
+    "blockbud": {
+      "id": 6753329479,
+      "name": "BlockBud: Custom App Blocker",
+      "bundleId": "com.krylabs.YourMorning",
+      "version": "2.1",
+      "released": "2025-11-04",
+      "updated": "2026-07-20",
+      "minimumOs": "17.2",
+      "price": 199,
+      "currency": "INR",
+      "formattedPrice": "₹ 199",
+      "genres": [
+        "Productivity"
+      ],
+      "storeUrl": "https://apps.apple.com/in/app/blockbud-custom-app-blocker/id6753329479",
+      "screenshots": [
+        "01.webp",
+        "02.webp",
+        "03.webp",
+        "04.webp",
+        "05.webp",
+        "06.webp",
+        "07.webp"
+      ]
+    },
+    "bubblenest": {
+      "id": 6743532224,
+      "name": "BubbleNest: Friend Finding App",
+      "bundleId": "com.krylabs.matchmyvibe.MatchMyVibe",
+      "version": "4.1",
+      "released": "2025-08-13",
+      "updated": "2026-08-26",
+      "minimumOs": "17.2",
+      "price": 0,
+      "currency": "INR",
+      "formattedPrice": "Free",
+      "genres": [
+        "Lifestyle"
+      ],
+      "storeUrl": "https://apps.apple.com/in/app/bubblenest-friend-finding-app/id6743532224",
+      "screenshots": [
+        "01.webp",
+        "02.webp",
+        "03.webp",
+        "04.webp",
+        "05.webp",
+        "06.webp"
+      ]
+    },
+    "cocotree": {
+      "id": 6475201153,
+      "name": "CocoTree: AI food suggestions",
+      "bundleId": "KryLabs.CocoTree",
+      "version": "1.2",
+      "released": "2024-01-01",
+      "updated": "2024-01-03",
+      "minimumOs": "16.0",
+      "price": 0,
+      "currency": "INR",
+      "formattedPrice": "Free",
+      "genres": [
+        "Food & Drink"
+      ],
+      "storeUrl": "https://apps.apple.com/in/app/cocotree-ai-food-suggestions/id6475201153",
+      "screenshots": [
+        "01.webp",
+        "02.webp",
+        "03.webp",
+        "04.webp",
+        "05.webp"
+      ]
+    },
+    "reelmark": {
+      "id": 6758064805,
+      "name": "Reelmark: Bookmark for Reels",
+      "bundleId": "com.krylabs.reelShare",
+      "version": "3.1",
+      "released": "2026-02-10",
+      "updated": "2026-08-10",
+      "minimumOs": "17.2",
+      "price": 0,
+      "currency": "INR",
+      "formattedPrice": "Free",
+      "genres": [
+        "Productivity",
+        "Utilities"
+      ],
+      "storeUrl": "https://apps.apple.com/in/app/reelmark-bookmark-for-reels/id6758064805",
+      "screenshots": [
+        "01.webp",
+        "02.webp",
+        "03.webp",
+        "04.webp",
+        "05.webp",
+        "06.webp"
+      ]
+    }
+  }
+}

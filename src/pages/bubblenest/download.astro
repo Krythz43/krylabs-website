@@ -15,14 +15,25 @@
 //
 // Desktop and anything unrecognised get the plain chooser: a wrong guess sends someone to
 // a store they cannot install from, which is worse than one extra tap.
-const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/instrument-serif/latin-400.css';
+import '@fontsource/instrument-serif/latin-400-italic.css';
+
+import { listing } from '../../lib/appstore';
+
+// The listing URL from the App Store snapshot (npm run sync), so a re-listing reaches the
+// one link printed on flyers without a hand edit. Build-time only: nothing here is served.
+const store = listing('bubblenest');
+if (!store) throw new Error('bubblenest has no App Store snapshot entry: run `npm run sync`');
+const IOS_URL = store.storeUrl;
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
 // Not a guess: this is verbatim what apps.apple.com 301s an iPhone user-agent to. Apple
 // serves NO html for an app page on iOS — every URL form (with locale, without, itunes.com,
 // ?mt=8) answers an iPhone UA with this scheme. That is the whole reason the App Store
 // button dies in Instagram while Google Play works: play.google.com returns a real page,
 // Apple returns a scheme the webview cannot load.
-const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
+const IOS_SCHEME_URL = IOS_URL.replace(/^https:/, 'itms-appss:');
 // Hands the URL to Safari, where the universal link resolves into the App Store normally.
 // Per the in-app-browser compatibility matrix (github.com/shalanah/inapp-debugger), this
 // escape works in Instagram on iOS *only when invoked via window.open* — assigning it to
@@ -39,23 +50,15 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     <meta name="description" content="Get BubbleNest on iPhone or Android — one link, the right store." />
     <!-- A redirect stub has nothing to index; keep /bubblenest as the canonical page. -->
     <meta name="robots" content="noindex, follow" />
-    <link rel="canonical" href="https://krylabs.com/bubblenest" />
+    <link rel="canonical" href="https://krylabs.com/bubblenest/" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#fbfbf9" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Krylabs" />
     <meta property="og:title" content="Download BubbleNest" />
     <meta property="og:description" content="Make friends through what you're into right now. Free on iPhone and Android." />
-    <meta property="og:url" content="https://krylabs.com/bubblenest/download" />
+    <meta property="og:url" content="https://krylabs.com/bubblenest/download/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <!-- Webfonts are a progressive nicety; font-display:swap keeps them off the critical
-         path so the buttons are readable (in fallback faces) in the first paint. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap"
-      rel="stylesheet"
-    />
 
     <!-- is:global is load-bearing. Scoped styles compile `* { padding: 0 }` into
          `[data-astro-cid-…] { padding: 0 }` — an attribute selector that outranks plain
@@ -81,6 +84,9 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
            box and spilled over the side padding, so the rows ran edge-to-edge on a
            phone. A grid area respects the padding. */
         display: grid;
+        /* Chooser centred in the free space, copyright parked at the bottom — the
+           footer must not pull the buttons off centre. */
+        grid-template-rows: 1fr auto;
         place-items: center;
         padding: 32px 24px;
         background: var(--bg);
@@ -94,12 +100,40 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
       :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
 
       .wrap { width: 100%; max-width: 460px; text-align: center; }
+
+      /* Way back to krylabs.com. Fixed in the corner rather than in the flow, and
+         quiet by default: this page exists to get someone into a store, so the mark
+         must never compete with the two buttons. 40px is the smallest comfortable tap
+         target and still clears the 460px column at every width. */
+      .home {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--card);
+        color: var(--ink-3);
+        font-size: 0.82rem;
+        font-weight: 600;
+        line-height: 1;
+        opacity: 0.6;
+        transition: opacity 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .home:hover { opacity: 1; border-color: var(--ink); color: var(--ink); }
+
+      .foot {
+        margin-top: 32px;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
       .eyebrow {
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--accent);
+        font-size: 0.95rem;
+        color: var(--muted);
       }
       h1 {
         margin: 14px 0 12px;
@@ -180,7 +214,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
         border-radius: 10px;
         background: var(--card);
         color: var(--ink-3);
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 11px;
         line-height: 1.5;
         text-align: left;
@@ -191,6 +225,8 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     </style>
   </head>
   <body>
+    <a class="home" href="/" title="krylabs.com" aria-label="Krylabs home">K</a>
+
     <main class="wrap">
       <p class="eyebrow">BubbleNest</p>
       <h1>Get the <em>app</em>.</h1>
@@ -220,7 +256,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
         </a>
       </div>
 
-      <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
+      <p class="status" id="status">Pick your store, or <a href="/bubblenest/">learn more about BubbleNest</a></p>
 
       <div class="rescue" id="rescue" hidden>
         <p class="rescue__hint" id="rescue-hint"></p>
@@ -229,6 +265,8 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
 
       <pre class="debug" id="debug" hidden></pre>
     </main>
+
+    <footer class="foot">&copy; 2026 Krylabs</footer>
 
     <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL, IOS_SAFARI_ESCAPE_URL }}>
       (function () {
@@ -401,7 +439,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
           if (rescue.dataset && rescue.dataset.wired) return; // don't double-bind the button
           if (rescue.dataset) rescue.dataset.wired = '1';
           copy.addEventListener('click', function () {
-            var url = 'https://krylabs.com/bubblenest/download';
+            var url = 'https://krylabs.com/bubblenest/download/';
             function done() { copy.textContent = 'Link copied'; }
             // execCommand is deprecated but is the only path in older in-app webviews —
             // exactly the browsers that get this far.
@@ -418,7 +456,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
                 document.body.removeChild(ta);
                 done();
               } catch (e) {
-                copy.textContent = 'krylabs.com/bubblenest/download';
+                copy.textContent = 'krylabs.com/bubblenest/download/';
               }
             }
             if (navigator.clipboard && navigator.clipboard.writeText) {

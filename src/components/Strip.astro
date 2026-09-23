@@ -1,0 +1,36 @@
+---
+// A row of phone screenshots at their native aspect ratio.
+//   hero  - the home page strip, bleeds right and scrolls sideways
+//   page  - the same on an app page
+//   row   - two shots beside an app row, no scrolling
+import { Image } from 'astro:assets';
+import type { Shot } from '../lib/apps';
+
+interface Props {
+  shots: Shot[];
+  variant?: 'hero' | 'page' | 'row';
+  /** How many images load eagerly (the ones above the fold). */
+  eager?: number;
+}
+
+const { shots, variant = 'page', eager = 0 } = Astro.props;
+const widths = variant === 'row' ? [200, 400] : [240, 480];
+const sizes = variant === 'row' ? '200px' : '(max-width: 760px) 200px, 240px';
+---
+
+<div class={`strip strip--${variant}`}>
+  {shots.map((s, i) => (
+    <figure class="strip__shot" style={`--i:${i}`}>
+      <Image
+        src={s.img}
+        alt={s.alt}
+        width={widths[widths.length - 1]}
+        widths={widths}
+        sizes={sizes}
+        loading={i < eager ? 'eager' : 'lazy'}
+        fetchpriority={i < eager ? 'high' : 'auto'}
+        decoding="async"
+      />
+    </figure>
+  ))}
+</div>

@@ -1,0 +1,40 @@
+---
+// One app on the home page: identity and copy on the left, two real screenshots on the right.
+import { Image } from 'astro:assets';
+import Strip from './Strip.astro';
+import AppFacts from './AppFacts.astro';
+import { primaryLink, shotsFor, type App } from '../lib/apps';
+
+interface Props {
+  app: App;
+}
+
+const { app } = Astro.props;
+const d = app.data;
+const shots = shotsFor(app, 2);
+const href = `/${app.id}/`;
+const primary = primaryLink(app);
+---
+
+<article class={`row${shots.length === 0 ? ' row--single' : ''}`} id={app.id}>
+  <div>
+    <div class="row__id">
+      <Image class="row__icon" src={d.icon} alt="" width={112} height={112} loading="lazy" />
+      <div>
+        <h3 class="row__name"><a href={href}>{d.name}</a></h3>
+        <p class="row__tag">{d.tagline}</p>
+      </div>
+    </div>
+    <p class="row__desc">{d.summary}</p>
+    <AppFacts app={app} />
+    <p class="row__links">
+      <a class="link" href={href}>About {d.name}</a>
+      {primary && (
+        <a class="link link--quiet" href={primary.href} {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>
+          {primary.label}
+        </a>
+      )}
+    </p>
+  </div>
+  {shots.length > 0 && <Strip shots={shots} variant="row" />}
+</article>

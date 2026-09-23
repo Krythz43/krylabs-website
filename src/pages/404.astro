@@ -1,16 +1,18 @@
 ---
 import Base from '../layouts/Base.astro';
-import PageHero from '../components/PageHero.astro';
+import { site } from '../lib/site';
 ---
-<Base title="Page not found — Krylabs">
-  <PageHero
-    eyebrow="Error 404"
-    title="This page wandered <em>off</em>."
-    lead="The link's broken or the page has moved. Let's get you back to something that works."
-  >
-    <div slot="actions" class="subhero__actions" data-reveal>
-      <a href="/" class="btn">Back to Krylabs</a>
-      <a href="/#work" class="btn btn--ghost">See our work</a>
+
+<Base title={`Page not found | ${site.name}`} noindex>
+  <section class="page page--end">
+    <div class="container">
+      <p class="kicker hero__kicker">Error 404</p>
+      <h1 class="display">This page wandered off.</h1>
+      <p class="lead page__lead">The link is broken or the page has moved. The apps are still where they were.</p>
+      <div class="page__actions">
+        <a href="/" class="btn">Back to {site.name}</a>
+        <a href="/#apps" class="btn btn--ghost">See the apps</a>
+      </div>
     </div>
-  </PageHero>
+  </section>
 </Base>

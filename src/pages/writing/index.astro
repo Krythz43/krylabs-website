@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostItem from '../../components/PostItem.astro';
+import { getPosts } from '../../lib/apps';
+import { site } from '../../lib/site';
+
+const posts = await getPosts();
+const description = `Build notes from ${site.name}: what shipped, what broke, and what it took to fix.`;
+---
+
+<Base title={`Writing | ${site.name}`} description={description} ogImage="/og/writing.png">
+  <section class="page">
+    <div class="container">
+      <p class="kicker hero__kicker">Writing</p>
+      <h1 class="display">Build notes.</h1>
+      <p class="lead page__lead">What shipped, what broke, and what it took to fix. Written as it happened.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="posts">
+        {posts.map((p) => <PostItem post={p} level="h2" />)}
+      </div>
+    </div>
+  </section>
+</Base>
