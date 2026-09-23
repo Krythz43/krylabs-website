@@ -1,0 +1,9 @@
+{
+  "_comment": "The brand tokens. src/styles/global.css declares the same values at :root for the pages; this file feeds the renderers that cannot read CSS (src/lib/og.ts, scripts/make-logo.mjs).",
+  "paper": "#fbfbf9",
+  "ink": "#17160f",
+  "ink2": "#34322a",
+  "muted": "#76746a",
+  "lineStrong": "#d8d6cc",
+  "accent": "#bf4d2e"
+}

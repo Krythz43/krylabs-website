@@ -61,7 +61,8 @@ src/
 ├── lib/
 │   ├── site.ts            # name, email, address, socials, date helpers
 │   ├── appstore.ts        # reads the snapshot + resolves screenshot imports
-│   ├── apps.ts            # getApps() (checked + sorted), primary link, section ids, screenshots
+│   ├── apps.ts            # getApps()/getPosts() (checked + sorted), reserved slugs, links, section ids
+│   ├── palette.json       # brand colours for the renderers that cannot read CSS (og.ts, make-logo)
 │   ├── jsonld.ts          # Organization / Person / SoftwareApplication / BlogPosting builders
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/

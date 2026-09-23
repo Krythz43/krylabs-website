@@ -93,7 +93,7 @@ export function softwareApplication(app: CollectionEntry<'apps'>, store: Listing
     applicationCategory: genre ? CATEGORY[genre] : 'UtilitiesApplication',
     operatingSystem: d.platforms.map((p) => OS[p] ?? p).join(', '),
     image: absolute(`/og/${app.id}.png`),
-    screenshot: screenshotUrls,
+    ...(screenshotUrls.length > 0 ? { screenshot: screenshotUrls } : {}),
     author: { '@id': ORG_ID },
     ...(store
       ? {

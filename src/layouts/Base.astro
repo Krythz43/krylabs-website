@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { site, absolute } from '../lib/site';
+import { HOME_IDS, PAGE_IDS } from '../lib/apps';
 // Preload the two faces the first paint needs. The hashed URLs come from the same
 // package the stylesheet imports, so they can never drift apart.
 import interRegular from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
@@ -37,10 +38,10 @@ const canonical = absolute(path === '/' ? '/' : `${path}/`);
 const ogImageUrl = absolute(ogImage);
 
 const navLinks = [
-  { href: '/#apps', label: 'Apps' },
+  { href: `/#${HOME_IDS.apps}`, label: 'Apps' },
   { href: '/writing/', label: 'Writing' },
   { href: '/about/', label: 'About' },
-  { href: '/#contact', label: 'Contact' },
+  { href: `/#${HOME_IDS.contact}`, label: 'Contact' },
 ];
 
 const footerLinks = [
@@ -92,7 +93,7 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
     {ld.map((obj) => <script type="application/ld+json" set:html={ldJson(obj)} />)}
   </head>
   <body>
-    <header class="nav" id="nav">
+    <header class="nav" id={PAGE_IDS.nav}>
       <div class="container nav__inner">
         <a href="/" class="nav__logo">{site.name}</a>
         <nav class="nav__links" aria-label="Main">

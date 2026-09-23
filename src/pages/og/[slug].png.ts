@@ -1,20 +1,19 @@
 // Build-time Open Graph images: /og/home.png, /og/about.png, /og/writing.png,
 // /og/<app>.png and /og/writing-<post>.png. Pages reference them via Base's ogImage prop.
-// Icons and screenshots come from the same image imports the pages use, so the files
-// are resolved by Astro rather than by guessing paths.
+// Screenshots arrive as inlined bytes and icons by the path the content layer declares,
+// so nothing here guesses at the filesystem.
 import type { APIRoute } from 'astro';
-import { getCollection } from 'astro:content';
 import { renderOg, type OgSpec } from '../../lib/og';
-import { getApps, shotsFor, type App } from '../../lib/apps';
+import { screenBytes } from '../../lib/appstore';
+import { getApps, getPosts, listingFor } from '../../lib/apps';
 import { site, credentials } from '../../lib/site';
 
 export async function getStaticPaths() {
   const apps = await getApps();
-  const posts = await getCollection('posts');
-  const paths = (app: App, n: number) => shotsFor(app, n).map(({ img }) => img.fsPath);
+  const posts = await getPosts();
 
   // The apps the home hero leads with, one screenshot each; the card fits three.
-  const featured = apps.filter((a) => a.data.featured).slice(0, 3);
+  const featured = apps.filter((a) => a.data.featured && listingFor(a)).slice(0, 3);
 
   const pages: { slug: string; spec: OgSpec }[] = [
     {
@@ -23,7 +22,7 @@ export async function getStaticPaths() {
         kicker: `${site.name}, an independent app studio in Bengaluru`,
         title: site.tagline,
         description: 'iPhone apps and web products, designed, built and shipped by one person.',
-        screenshotPaths: featured.flatMap((a) => paths(a, 1)),
+        screenshots: featured.flatMap((a) => screenBytes(a.id, 1)),
       },
     },
     {
@@ -48,7 +47,7 @@ export async function getStaticPaths() {
         title: app.data.hero.title,
         description: app.data.summary,
         iconPath: app.data.icon.fsPath,
-        screenshotPaths: paths(app, 3),
+        screenshots: listingFor(app) ? screenBytes(app.id, 3) : [],
       },
     })),
     ...posts.map((post) => ({

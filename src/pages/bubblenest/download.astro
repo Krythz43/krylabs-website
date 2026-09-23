@@ -20,14 +20,20 @@ import '@fontsource/inter/latin-600.css';
 import '@fontsource/instrument-serif/latin-400.css';
 import '@fontsource/instrument-serif/latin-400-italic.css';
 
-const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
+import { listing } from '../../lib/appstore';
+
+// The listing URL from the App Store snapshot (npm run sync), so a re-listing reaches the
+// one link printed on flyers without a hand edit. Build-time only: nothing here is served.
+const store = listing('bubblenest');
+if (!store) throw new Error('bubblenest has no App Store snapshot entry: run `npm run sync`');
+const IOS_URL = store.storeUrl;
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
 // Not a guess: this is verbatim what apps.apple.com 301s an iPhone user-agent to. Apple
 // serves NO html for an app page on iOS — every URL form (with locale, without, itunes.com,
 // ?mt=8) answers an iPhone UA with this scheme. That is the whole reason the App Store
 // button dies in Instagram while Google Play works: play.google.com returns a real page,
 // Apple returns a scheme the webview cannot load.
-const IOS_SCHEME_URL = 'itms-appss://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
+const IOS_SCHEME_URL = IOS_URL.replace(/^https:/, 'itms-appss:');
 // Hands the URL to Safari, where the universal link resolves into the App Store normally.
 // Per the in-app-browser compatibility matrix (github.com/shalanah/inapp-debugger), this
 // escape works in Instagram on iOS *only when invoked via window.open* — assigning it to

@@ -49,9 +49,11 @@ export function absolute(path: string): string {
   return new URL(path, site.url).href;
 }
 
-/** A Date or an ISO "YYYY-MM-DD" string → "YYYY-MM-DD". */
+/** A Date or an ISO "YYYY-MM-DD" string (a full timestamp is trimmed) → "YYYY-MM-DD". */
 export function isoDate(d: Date | string): string {
-  return typeof d === 'string' ? d : d.toISOString().slice(0, 10);
+  const s = typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s))) throw new Error(`not a date: ${JSON.stringify(d)}`);
+  return s;
 }
 
 function fmt(d: Date | string, opts: Intl.DateTimeFormatOptions): string {

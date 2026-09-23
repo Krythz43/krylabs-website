@@ -1,5 +1,4 @@
 ---
-import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Strip from '../components/Strip.astro';
 import AppRow from '../components/AppRow.astro';
@@ -7,14 +6,15 @@ import ProductTile from '../components/ProductTile.astro';
 import Founder from '../components/Founder.astro';
 import PostItem from '../components/PostItem.astro';
 import Socials from '../components/Socials.astro';
-import { getApps, onAppStore, onGooglePlay, shotsFor } from '../lib/apps';
+import { getCollection } from 'astro:content';
+import { getApps, getPosts, onAppStore, onGooglePlay, shotsFor, HOME_IDS } from '../lib/apps';
 import { site, credentials, workHistory } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { organization, person, website } from '../lib/jsonld';
 
 const apps = await getApps();
 const products = (await getCollection('products')).sort((a, b) => a.data.order - b.data.order);
-const posts = (await getCollection('posts')).sort((a, b) => b.data.date.getTime() - a.data.date.getTime()).slice(0, 3);
+const posts = (await getPosts()).slice(0, 3);
 
 // The numbers in the lead are computed from the same facts the rows show, so they cannot drift.
 const storeCount = apps.filter(onAppStore).length;
@@ -38,7 +38,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
         {num(playCount)} on Google Play and {num(products.length)} on the web.
       </p>
       <div class="hero__actions">
-        <a href="#apps" class="btn">See the apps</a>
+        <a href={`#${HOME_IDS.apps}`} class="btn">See the apps</a>
         <a href="/writing/" class="btn btn--ghost">Read the build notes</a>
       </div>
       <p class="hero__creds">{credentials}</p>
@@ -46,7 +46,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
     </div>
   </section>
 
-  <section class="section" id="apps">
+  <section class="section" id={HOME_IDS.apps}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Apps</h2>
@@ -58,7 +58,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
     </div>
   </section>
 
-  <section class="section section--soft" id="web">
+  <section class="section section--soft" id={HOME_IDS.web}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">On the web</h2>
@@ -70,7 +70,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
     </div>
   </section>
 
-  <section class="section" id="founder">
+  <section class="section" id={HOME_IDS.founder}>
     <div class="container">
       <Founder>
         <p>
@@ -84,7 +84,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
   </section>
 
   {posts.length > 0 && (
-    <section class="section section--soft" id="writing">
+    <section class="section section--soft" id={HOME_IDS.writing}>
       <div class="container">
         <div class="section__head">
           <h2 class="display">Writing</h2>
@@ -97,7 +97,7 @@ const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i,
     </section>
   )}
 
-  <section class="section" id="contact">
+  <section class="section" id={HOME_IDS.contact}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Say hello</h2>

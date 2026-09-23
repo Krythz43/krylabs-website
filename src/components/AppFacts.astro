@@ -1,19 +1,22 @@
 ---
 // The listing facts under an app's blurb: platforms, status, version and date, price.
-// `long` is the app page (full date, minimum OS); the default is the home row.
-import type { CollectionEntry } from 'astro:content';
-import type { Listing } from '../lib/appstore';
+// `long` is the app page (full date, minimum OS); the default is the home row. The
+// version, date and price come from the App Store listing, so on a cross-platform app
+// they are labelled as such rather than implied for Google Play too.
+import { listingFor, type App } from '../lib/apps';
 import { longDate, monthYear } from '../lib/site';
 
 interface Props {
-  app: CollectionEntry<'apps'>;
-  store?: Listing;
+  app: App;
   long?: boolean;
 }
 
-const { app, store, long = false } = Astro.props;
+const { app, long = false } = Astro.props;
 const d = app.data;
+const store = listingFor(app);
 const coming = d.status === 'in-development';
+const crossPlatform = d.platforms.includes('Android');
+const versionLabel = crossPlatform ? 'App Store version' : 'Version';
 // The listing's minimum OS is the iOS floor; Android has no equivalent in the lookup data.
 const requires = long && store && d.platforms.includes('iPhone') ? `Requires iOS ${store.minimumOs} or later` : null;
 ---
@@ -21,7 +24,7 @@ const requires = long && store && d.platforms.includes('iPhone') ? `Requires iOS
 <p class={`facts${long ? ' facts--page' : ''}`}>
   <span>{d.platforms.join(', ')}</span>
   {coming && <span>In development</span>}
-  {store && <span>Version {store.version}, updated {long ? longDate(store.updated) : monthYear(store.updated)}</span>}
+  {store && <span>{versionLabel} {store.version}, updated {long ? longDate(store.updated) : monthYear(store.updated)}</span>}
   {requires && <span>{requires}</span>}
-  {store && <span>{store.formattedPrice}</span>}
+  {store && <span>{crossPlatform ? `${store.formattedPrice} on the App Store` : store.formattedPrice}</span>}
 </p>

@@ -11,7 +11,9 @@ const apps = defineCollection({
       name: z.string(),
       tagline: z.string(),
       summary: z.string(),
-      icon: image(),
+      // PNG or JPEG only: the content layer turns an SVG into a component with no file path,
+      // and the OG renderer (src/lib/og.ts) needs the file.
+      icon: image().refine((i) => i.format !== 'svg', { message: 'app icons must be PNG or JPEG; the OG renderer needs a raster file' }),
       platforms: z.array(z.enum(['iPhone', 'iPad', 'Mac', 'Android'])),
       /** Apple track id. Present = `npm run sync` pulls this app's listing and screenshots. */
       storeId: z.number().int().optional(),

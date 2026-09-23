@@ -6,8 +6,7 @@ import Base from '../layouts/Base.astro';
 import Strip from '../components/Strip.astro';
 import Defs from '../components/Defs.astro';
 import AppFacts from '../components/AppFacts.astro';
-import { listing } from '../lib/appstore';
-import { getApps, primaryLink, sectionIds, shotsFor, PAGE_IDS, type App } from '../lib/apps';
+import { getApps, listingFor, primaryLink, sectionIds, shotsFor, PAGE_IDS, type App } from '../lib/apps';
 import { site, absolute } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { softwareApplication, organization, person } from '../lib/jsonld';
@@ -22,9 +21,9 @@ interface Props {
 
 const { app } = Astro.props;
 const d = app.data;
-const store = listing(app.id);
+const store = listingFor(app);
 const shots = shotsFor(app);
-const primary = primaryLink(app, store, true);
+const primary = primaryLink(app, true);
 const ids = sectionIds(app);
 
 // The ghost button names the section it scrolls to: "See what's inside", "See how it works".
@@ -60,7 +59,7 @@ const jsonLd = [softwareApplication(app, store, screenshotUrls), organization(),
         )}
         {insideLabel && <a href={`#${ids[0]}`} class="btn btn--ghost">{insideLabel}</a>}
       </div>
-      <AppFacts app={app} store={store} long />
+      <AppFacts app={app} long />
       {shots.length > 0 && <Strip shots={shots} variant="page" eager={3} />}
     </div>
   </section>

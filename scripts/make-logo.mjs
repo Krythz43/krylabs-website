@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
+import palette from '../src/lib/palette.json' with { type: 'json' };
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
@@ -23,9 +24,9 @@ const tree = {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#17160f',
+      background: palette.ink,
       borderRadius: 112,
-      color: '#fbfbf9',
+      color: palette.paper,
       fontFamily: 'Inter',
       fontSize: 320,
       fontWeight: 600,
@@ -34,7 +35,7 @@ const tree = {
     },
     children: [
       { type: 'div', props: { style: { marginTop: -20 }, children: 'K' } },
-      { type: 'div', props: { style: { position: 'absolute', right: 96, bottom: 96, width: 56, height: 56, borderRadius: 56, background: '#bf4d2e' } } },
+      { type: 'div', props: { style: { position: 'absolute', right: 96, bottom: 96, width: 56, height: 56, borderRadius: 56, background: palette.accent } } },
     ],
   },
 };
