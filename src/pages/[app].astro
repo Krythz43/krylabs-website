@@ -8,13 +8,14 @@ import Base from '../layouts/Base.astro';
 import Strip from '../components/Strip.astro';
 import Defs from '../components/Defs.astro';
 import AppFacts from '../components/AppFacts.astro';
-import { listing, screens } from '../lib/appstore';
-import { primaryLink, sectionIds } from '../lib/apps';
+import { listing, screens, snapshotSlugs } from '../lib/appstore';
+import { primaryLink, sectionIds, checkSnapshot, PAGE_IDS } from '../lib/apps';
 import { site, absolute } from '../lib/site';
 import { softwareApplication } from '../lib/jsonld';
 
 export async function getStaticPaths() {
   const apps = await getCollection('apps');
+  checkSnapshot(apps, snapshotSlugs);
   return apps.map((app) => ({ params: { app: app.id }, props: { app } }));
 }
 
@@ -28,6 +29,10 @@ const store = listing(app.id);
 const shots = screens(app.id);
 const primary = primaryLink(app, store, true);
 const ids = sectionIds(app);
+
+// The ghost button names the section it scrolls to: "See what's inside", "See how it works".
+const firstHeading = d.sections[0]?.heading;
+const insideLabel = firstHeading ? `See ${firstHeading.charAt(0).toLowerCase()}${firstHeading.slice(1)}` : null;
 
 // Screenshot URLs for structured data. 480px is a size the strip below already emits,
 // so this resolves to the same file and adds no transform.
@@ -50,11 +55,11 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
       </div>
       <h1 class="display">{d.hero.title}</h1>
       <p class="lead page__lead">{d.hero.lead}</p>
-      <div class="page__actions" id="download">
+      <div class="page__actions" id={PAGE_IDS.download}>
         {primary && (
           <a href={primary.href} class="btn" {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
         )}
-        {ids.length > 0 && <a href={`#${ids[0]}`} class="btn btn--ghost">See what's inside</a>}
+        {insideLabel && <a href={`#${ids[0]}`} class="btn btn--ghost">{insideLabel}</a>}
       </div>
       <AppFacts app={app} store={store} long />
       {shots.length > 0 && (
@@ -83,7 +88,7 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
     </section>
   )}
 
-  <section class="section section--soft" id="support">
+  <section class="section section--soft" id={PAGE_IDS.support}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Support{d.legal ? ' and the fine print' : ''}</h2>
@@ -91,7 +96,11 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
           Questions about {d.name}? Email <a class="link" href={`mailto:${site.email}`}>{site.email}</a>.
         </p>
       </div>
-      {d.legal && <Defs items={d.legal} />}
+      {d.legal && (
+        <div id={PAGE_IDS.privacy}>
+          <Defs items={d.legal} />
+        </div>
+      )}
     </div>
   </section>
 </Base>

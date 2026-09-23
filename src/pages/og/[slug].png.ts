@@ -44,7 +44,7 @@ export async function getStaticPaths() {
     ...apps.map((app) => ({
       slug: app.id,
       spec: {
-        kicker: `${app.data.name}, ${app.data.tagline.toLowerCase()}`,
+        kicker: `${app.data.name}, ${app.data.tagline}`,
         title: app.data.hero.title,
         description: app.data.summary,
         iconPath: app.data.icon.fsPath,

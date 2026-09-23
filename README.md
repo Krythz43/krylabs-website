@@ -55,14 +55,14 @@ src/
 │   ├── appstore/<slug>/   # 640px WebP screenshots from the store listing (committed, via sync)
 │   ├── icons/             # app icons (png/jpg, see below) and svg marks for web products
 │   ├── products/          # one screenshot of each web product's live site
-│   ├── fonts/og/          # TTFs for the OG renderer only (the site itself uses @fontsource)
 │   └── krithick-santhosh.jpg
-├── components/            # Strip (phone screenshots), AppRow, ProductTile, Defs, Founder, Socials
+├── components/            # Strip (phone screenshots), AppRow, AppFacts, ProductTile, Defs, Founder, PostItem, Socials
 ├── layouts/Base.astro     # <head> meta/OG/JSON-LD, nav, footer, the one script
 ├── layouts/Legal.astro    # wrapper for /legal/* and the BubbleNest /privacy + /terms pages
 ├── lib/
 │   ├── site.ts            # name, email, address, socials, date helpers
 │   ├── appstore.ts        # reads the snapshot + resolves screenshot imports
+│   ├── apps.ts            # primary link, section ids, snapshot/content consistency check
 │   ├── jsonld.ts          # Organization / Person / SoftwareApplication / BlogPosting builders
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/
@@ -83,8 +83,9 @@ server.js                  # zero-dependency static server (fallback; Caddy is t
 ### Adding or changing an app
 
 1. Edit or add `src/content/apps/<slug>.md`. The slug is the URL.
-2. If it is on the App Store, add its track id to `APPS` in `scripts/sync-appstore.mjs`, run
-   `npm run sync`, and commit `src/data/appstore.json` + `src/assets/appstore/<slug>/`.
+2. If it is on the App Store, put its track id in the entry as `storeId:`, run `npm run sync`,
+   and commit `src/data/appstore.json` + `src/assets/appstore/<slug>/`. The build fails if an
+   entry's `storeId` has no matching snapshot, so a forgotten sync cannot ship.
 3. Put the icon under `src/assets/icons/` as a **PNG or JPEG** and reference it from the entry's
    `icon:` field; the page, the home row and the OG image all use that one import. It cannot be an
    SVG: the content layer turns SVGs into components with no file path, and the OG renderer
@@ -119,7 +120,9 @@ URLs are byte-identical to before:
 - **Palette:** warm paper (`--bg`), one accent (terracotta), hairlines for structure. Tokens at
   `:root` in `src/styles/global.css`.
 - **Type:** Instrument Serif for display headings, Inter for everything else. Both self-hosted
-  from `@fontsource` (latin subsets only); the two first-paint faces are preloaded.
+  from `@fontsource` (latin subsets only); the two first-paint faces are preloaded. The OG
+  renderer and the logo script use the same package's WOFF files, so there is one copy of each
+  face in the repo.
 - **Imagery:** real App Store screenshots are the only decoration. The hero strip is one
   screenshot from each featured app, then a second from each.
 - **Motion:** one entrance animation (the hero strip rises on load) and cross-document view

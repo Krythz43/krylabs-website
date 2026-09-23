@@ -1,16 +1,18 @@
 // Renders public/logo.png: the Organization logo referenced from JSON-LD. Structured-data
 // consumers want a raster/SVG at 112px or larger, and the favicon is an .ico, so this
-// draws a 512px mark once with the same renderer the OG images use.
+// draws a 512px mark once with the same renderer and typeface the OG images use.
 //
 //   node scripts/make-logo.mjs
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const inter = await fs.readFile(path.join(ROOT, 'src/assets/fonts/og/Inter-SemiBold.ttf'));
+const require = createRequire(import.meta.url);
+const inter = await fs.readFile(require.resolve('@fontsource/inter/files/inter-latin-600-normal.woff'));
 
 const tree = {
   type: 'div',

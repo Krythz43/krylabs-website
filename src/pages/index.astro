@@ -7,12 +7,14 @@ import ProductTile from '../components/ProductTile.astro';
 import Founder from '../components/Founder.astro';
 import PostItem from '../components/PostItem.astro';
 import Socials from '../components/Socials.astro';
-import { listing, screens } from '../lib/appstore';
+import { listing, screens, snapshotSlugs } from '../lib/appstore';
+import { checkSnapshot } from '../lib/apps';
 import { site } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { organization, person, website } from '../lib/jsonld';
 
 const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
+checkSnapshot(apps, snapshotSlugs);
 const products = (await getCollection('products')).sort((a, b) => a.data.order - b.data.order);
 const posts = (await getCollection('posts')).sort((a, b) => b.data.date.getTime() - a.data.date.getTime()).slice(0, 3);
 

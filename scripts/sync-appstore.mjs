@@ -3,31 +3,32 @@
 //
 //   npm run sync        # refresh src/data/appstore.json and src/assets/appstore/<slug>/
 //
+// Which apps: every src/content/apps/<slug>.md with a `storeId:` in its frontmatter. The
+// file name is the slug, so the content entry is the only place an app is declared.
+//
 // Everything it writes is committed: builds on the droplet never touch the network, and
 // a listing change is a normal reviewable diff. Screenshot files are 640px WebP straight
 // from Apple's CDN (the `640x0w.webp` size variant), which Astro then resizes per breakpoint.
 //
-// The run is all-or-nothing. The whole new tree is built next to the committed one on the
-// same filesystem, then swapped in with two renames, so an interrupted run leaves either
-// the old tree or the new one, never a mix. Slugs dropped from APPS disappear with the swap.
+// The run is all-or-nothing. The new tree is staged under .astro/ (gitignored, same
+// filesystem), swapped in with two renames, and the old tree is put back if the second
+// rename fails, so an interrupted run leaves either the old tree or the new one.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const CONTENT_DIR = path.join(ROOT, 'src/content/apps');
 const OUT_JSON = path.join(ROOT, 'src/data/appstore.json');
 const OUT_DIR = path.join(ROOT, 'src/assets/appstore');
-const NEW_DIR = `${OUT_DIR}.new`;
-const OLD_DIR = `${OUT_DIR}.old`;
+const STAGE = path.join(ROOT, '.astro/appstore-sync');
+const NEW_DIR = path.join(STAGE, 'new');
+const OLD_DIR = path.join(STAGE, 'old');
 const COUNTRY = 'in';
 
-// slug → Apple track id. The slug doubles as the content entry id and the URL path.
-const APPS = {
-  reelmark: 6758064805,
-  bubblenest: 6743532224,
-  blockbud: 6753329479,
-  cocotree: 6475201153,
-};
+async function exists(p) {
+  return fs.access(p).then(() => true, () => false);
+}
 
 async function download(url, file) {
   const res = await fetch(url);
@@ -35,14 +36,28 @@ async function download(url, file) {
   await fs.writeFile(file, Buffer.from(await res.arrayBuffer()));
 }
 
+// slug → Apple track id, read from the content entries' frontmatter.
+const APPS = {};
+for (const file of (await fs.readdir(CONTENT_DIR)).filter((f) => f.endsWith('.md')).sort()) {
+  const text = await fs.readFile(path.join(CONTENT_DIR, file), 'utf8');
+  const m = text.match(/^storeId:\s*(\d+)\s*$/m);
+  if (m) APPS[file.replace(/\.md$/, '')] = Number(m[1]);
+}
+if (Object.keys(APPS).length === 0) throw new Error(`no storeId found in ${CONTENT_DIR}`);
+
+// A previous run that died between the two renames leaves the old tree stranded here.
+if (!(await exists(OUT_DIR)) && (await exists(OLD_DIR))) {
+  await fs.rename(OLD_DIR, OUT_DIR);
+  console.warn('restored src/assets/appstore from an interrupted run');
+}
+await fs.rm(STAGE, { recursive: true, force: true });
+
 const ids = Object.values(APPS).join(',');
 const res = await fetch(`https://itunes.apple.com/lookup?id=${ids}&country=${COUNTRY}`);
 if (!res.ok) throw new Error(`lookup failed: ${res.status}`);
 const { results } = await res.json();
 const byId = new Map(results.map((r) => [r.trackId, r]));
 
-await fs.rm(NEW_DIR, { recursive: true, force: true });
-await fs.rm(OLD_DIR, { recursive: true, force: true });
 const apps = {};
 try {
   for (const [slug, id] of Object.entries(APPS)) {
@@ -80,16 +95,18 @@ try {
   }
 
   // Everything fetched: swap the trees, then write the snapshot that describes the new one.
+  if (await exists(OUT_DIR)) await fs.rename(OUT_DIR, OLD_DIR);
   try {
-    await fs.rename(OUT_DIR, OLD_DIR);
+    await fs.rename(NEW_DIR, OUT_DIR);
   } catch (e) {
-    if (e.code !== 'ENOENT') throw e; // first run: nothing to move aside
+    if (await exists(OLD_DIR)) await fs.rename(OLD_DIR, OUT_DIR);
+    throw e;
   }
-  await fs.rename(NEW_DIR, OUT_DIR);
-  await fs.rm(OLD_DIR, { recursive: true, force: true });
   const snapshot = { syncedAt: new Date().toISOString().slice(0, 10), apps };
   await fs.writeFile(OUT_JSON, JSON.stringify(snapshot, null, 2) + '\n');
   console.log(`wrote ${path.relative(ROOT, OUT_JSON)}`);
 } finally {
-  await fs.rm(NEW_DIR, { recursive: true, force: true });
+  // Only the staging area; the old tree is removed here too, but only once the new one is
+  // in place (if the swap failed, OLD_DIR was already moved back above).
+  if (await exists(OUT_DIR)) await fs.rm(STAGE, { recursive: true, force: true });
 }

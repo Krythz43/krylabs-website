@@ -4,17 +4,17 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import sharp from 'sharp';
-// The TTFs are inlined by Vite at build time, so rendering does not depend on the
-// working directory or on the files being deployed anywhere.
-import interRegular from '../assets/fonts/og/Inter-Regular.ttf?inline';
-import interSemiBold from '../assets/fonts/og/Inter-SemiBold.ttf?inline';
-import serifRegular from '../assets/fonts/og/InstrumentSerif-Regular.ttf?inline';
+// The same latin subsets the stylesheet uses, as WOFF (satori reads TTF/OTF/WOFF, not
+// WOFF2), inlined by Vite so rendering depends on no file path or working directory.
+import interRegular from '@fontsource/inter/files/inter-latin-400-normal.woff?inline';
+import interSemiBold from '@fontsource/inter/files/inter-latin-600-normal.woff?inline';
+import serifRegular from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff?inline';
 
 export interface OgSpec {
   /** Small line above the title. */
   kicker: string;
   title: string;
-  /** One sentence under the title. Keep it under ~110 characters. */
+  /** One sentence under the title; trimmed to fit if long. */
   description?: string;
   /** Path on disk of an app icon to show at the top left. */
   iconPath?: string;
@@ -22,7 +22,7 @@ export interface OgSpec {
   screenshotPaths?: string[];
 }
 
-// "data:font/ttf;base64,..." → ArrayBuffer, once per font.
+// "data:font/woff;base64,..." → ArrayBuffer, once per font.
 function font(dataUri: string): ArrayBuffer {
   const b = Buffer.from(dataUri.slice(dataUri.indexOf(',') + 1), 'base64');
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
@@ -33,10 +33,15 @@ const FONTS = [
   { name: 'Instrument Serif', data: font(serifRegular), weight: 400 as const, style: 'normal' as const },
 ];
 
-// resvg decodes PNG and JPEG, not WebP, so screenshots are transcoded on the way in.
-async function dataUri(file: string, width: number): Promise<string> {
+// resvg decodes PNG and JPEG, not WebP. Screenshots are opaque, so JPEG is fine; icons
+// can have transparent corners, so they stay PNG (JPEG would paint those black).
+async function jpegUri(file: string, width: number): Promise<string> {
   const buf = await sharp(file).resize({ width }).jpeg({ quality: 82 }).toBuffer();
   return `data:image/jpeg;base64,${buf.toString('base64')}`;
+}
+async function pngUri(file: string, width: number): Promise<string> {
+  const buf = await sharp(file).resize({ width }).png().toBuffer();
+  return `data:image/png;base64,${buf.toString('base64')}`;
 }
 
 // satori takes React-shaped element objects; a tiny helper keeps the tree readable.
@@ -52,19 +57,19 @@ const h = (type: string, props: Record<string, unknown>, ...children: unknown[])
 });
 
 export async function renderOg(spec: OgSpec): Promise<Buffer> {
-  const shots = await Promise.all((spec.screenshotPaths ?? []).slice(0, 3).map((p) => dataUri(p, 300)));
-  const icon = spec.iconPath ? await dataUri(spec.iconPath, 160) : null;
+  const shots = await Promise.all((spec.screenshotPaths ?? []).slice(0, 3).map((p) => jpegUri(p, 300)));
+  const icon = spec.iconPath ? await pngUri(spec.iconPath, 160) : null;
   const hasStrip = shots.length > 0;
+  // With a strip, the text column stops where the phones start (three 200px shots with
+  // 20px gaps, hanging 40px off the right edge, begin at x = 600).
+  const columnWidth = hasStrip ? 580 : 1200;
+  const textWidth = columnWidth - 72 - 20;
   // Three lines of description is all the card has room for beside the strip
   // (about 32 characters a line at this size).
   const limit = hasStrip ? 92 : 150;
   const description = spec.description && spec.description.length > limit
     ? spec.description.slice(0, limit).replace(/\s+\S*$/, '') + '…'
     : spec.description;
-  // With a strip, the text column stops where the phones start (three 200px shots with
-  // 20px gaps, hanging 40px off the right edge, begin at x = 600).
-  const columnWidth = hasStrip ? 580 : 1200;
-  const textWidth = columnWidth - 72 - 20;
 
   const tree = h(
     'div',
@@ -120,6 +125,7 @@ export async function renderOg(spec: OgSpec): Promise<Buffer> {
           : null,
       ),
     ),
+    // Footer, pinned so a long description can never push into it.
     h(
       'div',
       { style: { position: 'absolute', left: 72, bottom: 56, display: 'flex', alignItems: 'center', fontSize: 22, color: '#76746a' } },
@@ -156,11 +162,6 @@ export async function renderOg(spec: OgSpec): Promise<Buffer> {
       : null,
   );
 
-  const svg = await satori(tree as never, {
-    width: 1200,
-    height: 630,
-    fonts: FONTS,
-  });
-
+  const svg = await satori(tree as never, { width: 1200, height: 630, fonts: FONTS });
   return new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng();
 }

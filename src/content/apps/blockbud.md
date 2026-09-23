@@ -3,6 +3,7 @@ name: BlockBud
 tagline: Custom app blocker
 summary: Block the apps that pull at you and design the screen that stops you, with your own photos and words. Everything stays on your phone.
 icon: ../../assets/icons/blockbud.jpg
+storeId: 6753329479
 platforms: [iPhone]
 order: 3
 featured: true

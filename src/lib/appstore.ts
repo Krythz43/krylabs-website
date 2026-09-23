@@ -22,6 +22,9 @@ export interface Listing {
 
 const apps: Record<string, Listing> = snapshot.apps;
 
+/** Every slug the snapshot knows, for checkSnapshot(). */
+export const snapshotSlugs: string[] = Object.keys(apps);
+
 const files = import.meta.glob<ImageMetadata>('/src/assets/appstore/*/*.webp', {
   eager: true,
   import: 'default',

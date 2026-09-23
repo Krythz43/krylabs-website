@@ -41,6 +41,7 @@ export function organization() {
     email: site.email,
     telephone: site.phone,
     founder: { '@id': PERSON_ID },
+    // No sameAs: the studio has no profiles of its own; the founder's are on the Person node.
     address: {
       '@type': 'PostalAddress',
       streetAddress: site.address.street,
@@ -49,7 +50,6 @@ export function organization() {
       postalCode: site.address.postalCode,
       addressCountry: site.address.country,
     },
-    sameAs: [site.founder.linkedin, site.founder.github, site.founder.x],
   };
 }
 

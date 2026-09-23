@@ -3,6 +3,7 @@ name: CocoTree
 tagline: AI food suggestions
 summary: Tell it your mood and how hungry you are, and it tells you what to eat. Built for the moment the menu is too long.
 icon: ../../assets/icons/cocotree.jpg
+storeId: 6475201153
 platforms: [iPhone]
 order: 4
 featured: true

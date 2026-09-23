@@ -51,7 +51,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     <meta property="og:site_name" content="Krylabs" />
     <meta property="og:title" content="Download BubbleNest" />
     <meta property="og:description" content="Make friends through what you're into right now. Free on iPhone and Android." />
-    <meta property="og:url" content="https://krylabs.com/bubblenest/download" />
+    <meta property="og:url" content="https://krylabs.com/bubblenest/download/" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- is:global is load-bearing. Scoped styles compile `* { padding: 0 }` into
@@ -250,7 +250,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
         </a>
       </div>
 
-      <p class="status" id="status">Pick your store, or <a href="/bubblenest">learn more about BubbleNest</a></p>
+      <p class="status" id="status">Pick your store, or <a href="/bubblenest/">learn more about BubbleNest</a></p>
 
       <div class="rescue" id="rescue" hidden>
         <p class="rescue__hint" id="rescue-hint"></p>
@@ -433,7 +433,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
           if (rescue.dataset && rescue.dataset.wired) return; // don't double-bind the button
           if (rescue.dataset) rescue.dataset.wired = '1';
           copy.addEventListener('click', function () {
-            var url = 'https://krylabs.com/bubblenest/download';
+            var url = 'https://krylabs.com/bubblenest/download/';
             function done() { copy.textContent = 'Link copied'; }
             // execCommand is deprecated but is the only path in older in-app webviews —
             // exactly the browsers that get this far.
@@ -450,7 +450,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
                 document.body.removeChild(ta);
                 done();
               } catch (e) {
-                copy.textContent = 'krylabs.com/bubblenest/download';
+                copy.textContent = 'krylabs.com/bubblenest/download/';
               }
             }
             if (navigator.clipboard && navigator.clipboard.writeText) {

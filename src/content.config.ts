@@ -12,7 +12,9 @@ const apps = defineCollection({
       tagline: z.string(),
       summary: z.string(),
       icon: image(),
-      platforms: z.array(z.string()),
+      platforms: z.array(z.enum(['iPhone', 'iPad', 'Mac', 'Android'])),
+      /** Apple track id. Present = `npm run sync` pulls this app's listing and screenshots. */
+      storeId: z.number().int().optional(),
       status: z.enum(['live', 'in-development']).default('live'),
       order: z.number(),
       featured: z.boolean().default(false),

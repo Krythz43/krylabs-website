@@ -3,6 +3,7 @@ name: ReelMark
 tagline: Bookmarks for Reels
 summary: Save Reels from Instagram into collections you can search, add a note while you scroll, and get a summary of what you kept.
 icon: ../../assets/icons/reelmark.jpg
+storeId: 6758064805
 platforms: [iPhone]
 order: 1
 featured: true

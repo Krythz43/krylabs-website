@@ -3,12 +3,13 @@ name: BubbleNest
 tagline: Friend-finding app
 summary: Make friends through what you are into right now. Post a bubble, find people nearby who feel the same, and turn a shared vibe into real plans.
 icon: ../../assets/icons/bubblenest.jpg
+storeId: 6743532224
 platforms: [iPhone, Android]
 order: 2
 featured: true
 download:
   label: Download the app
-  href: /bubblenest/download
+  href: /bubblenest/download/
 hero:
   title: Find your people, one bubble at a time.
   lead: Most apps are built for dating, followers or fleeting chats. BubbleNest is for making actual friends. Post a bubble, "anyone up for coffee?", a song you cannot stop playing, a rant that needs company, and connect with the people who feel it too.
@@ -43,10 +44,10 @@ statement:
 legal:
   - t: Privacy policy
     d: What we collect, what we deliberately do not, and how deletion works.
-    href: /privacy
+    href: /privacy/
   - t: Terms of service
     d: The rules of the nest, from conduct to purchases.
-    href: /terms
+    href: /terms/
   - t: Delete your account
     d: Self-service deletion, in the app or right from the browser.
     href: /bubblenest/delete-account

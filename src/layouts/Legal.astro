@@ -20,6 +20,8 @@ const {
   backHref = '/',
   backLabel = `Back to ${site.name}`,
 } = Astro.props;
+// astro build does not type-check props, so the requirement is enforced here too.
+if (!updated) throw new Error(`Legal page "${title}" must say when it was last updated`);
 ---
 
 <Base title={`${title} | ${site.name}`} description={description}>
