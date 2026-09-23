@@ -1,11 +1,33 @@
 // Structured data builders. Ratings are deliberately absent: the counts are too small to
 // be meaningful, and a rating markup with two reviews reads worse than none.
 import type { CollectionEntry } from 'astro:content';
-import { site, absolute } from './site';
+import { site, absolute, isoDate } from './site';
 import type { Listing } from './appstore';
 
 const ORG_ID = `${site.url}/#organization`;
 const PERSON_ID = `${site.url}/#founder`;
+
+// App Store genres → the schema.org applicationCategory values Google recognises.
+const CATEGORY: Record<string, string> = {
+  Productivity: 'UtilitiesApplication',
+  Utilities: 'UtilitiesApplication',
+  Lifestyle: 'LifestyleApplication',
+  'Food & Drink': 'LifestyleApplication',
+  'Social Networking': 'SocialNetworkingApplication',
+  'Health & Fitness': 'HealthApplication',
+  Entertainment: 'EntertainmentApplication',
+  'Photo & Video': 'MultimediaApplication',
+  Music: 'MultimediaApplication',
+  Education: 'EducationalApplication',
+  Business: 'BusinessApplication',
+  Finance: 'FinanceApplication',
+  Travel: 'TravelApplication',
+  Shopping: 'ShoppingApplication',
+  Games: 'GameApplication',
+  Reference: 'ReferenceApplication',
+};
+
+const OS: Record<string, string> = { iPhone: 'iOS', iPad: 'iPadOS', Mac: 'macOS', Android: 'Android' };
 
 export function organization() {
   return {
@@ -14,7 +36,7 @@ export function organization() {
     '@id': ORG_ID,
     name: site.name,
     url: site.url,
-    logo: absolute('/favicon.ico'),
+    logo: absolute('/logo.png'),
     email: site.email,
     telephone: site.phone,
     founder: { '@id': PERSON_ID },
@@ -30,7 +52,8 @@ export function organization() {
   };
 }
 
-export function person() {
+/** @param image absolute URL of the founder's portrait (see src/lib/portrait.ts). */
+export function person(image: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -38,8 +61,8 @@ export function person() {
     name: site.founder.name,
     jobTitle: 'Founder',
     worksFor: { '@id': ORG_ID },
-    url: absolute('/about'),
-    image: absolute('/og/about.png'),
+    url: absolute('/about/'),
+    image,
     sameAs: [site.founder.linkedin, site.founder.github, site.founder.x],
     alumniOf: { '@type': 'CollegeOrUniversity', name: 'IIT Kharagpur' },
   };
@@ -57,15 +80,16 @@ export function website() {
 
 export function softwareApplication(app: CollectionEntry<'apps'>, store: Listing | undefined, screenshotUrls: string[]) {
   const d = app.data;
-  const os = d.platforms.map((p) => ({ iPhone: 'iOS', iPad: 'iPadOS', Mac: 'macOS', Android: 'Android' })[p] ?? p);
+  const genre = store?.genres?.find((g) => CATEGORY[g]);
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: d.name,
-    url: absolute(`/${app.id}`),
+    url: absolute(`/${app.id}/`),
     description: d.summary,
-    applicationCategory: store?.genres?.[0] ? `${store.genres[0]}Application` : 'MobileApplication',
-    operatingSystem: os.join(', '),
+    // Apps without a listing yet are all planners or tools, so Utilities is the honest default.
+    applicationCategory: genre ? CATEGORY[genre] : 'UtilitiesApplication',
+    operatingSystem: d.platforms.map((p) => OS[p] ?? p).join(', '),
     image: absolute(`/og/${app.id}.png`),
     screenshot: screenshotUrls,
     author: { '@id': ORG_ID },
@@ -88,11 +112,11 @@ export function blogPosting(post: CollectionEntry<'posts'>) {
     '@type': 'BlogPosting',
     headline: d.title,
     description: d.description,
-    datePublished: d.date.toISOString().slice(0, 10),
-    ...(d.updated ? { dateModified: d.updated.toISOString().slice(0, 10) } : {}),
+    datePublished: isoDate(d.date),
+    ...(d.updated ? { dateModified: isoDate(d.updated) } : {}),
     author: { '@id': PERSON_ID },
     publisher: { '@id': ORG_ID },
     image: absolute(`/og/writing-${post.id}.png`),
-    mainEntityOfPage: absolute(`/writing/${post.id}`),
+    mainEntityOfPage: absolute(`/writing/${post.id}/`),
   };
 }

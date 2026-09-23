@@ -97,17 +97,17 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
 
       /* Way back to krylabs.com. Fixed in the corner rather than in the flow, and
          quiet by default: this page exists to get someone into a store, so the mark
-         must never compete with the two buttons. 30px keeps it clear of the 460px
-         column at every width; the tap target is the whole square. */
+         must never compete with the two buttons. 40px is the smallest comfortable tap
+         target and still clears the 460px column at every width. */
       .home {
         position: fixed;
-        top: 14px;
-        right: 14px;
+        top: 12px;
+        right: 12px;
         z-index: 2;
         display: grid;
         place-items: center;
-        width: 30px;
-        height: 30px;
+        width: 40px;
+        height: 40px;
         border: 1px solid var(--line);
         border-radius: 9px;
         background: var(--card);

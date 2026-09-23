@@ -11,6 +11,10 @@ interface Props {
   description?: string;
   /** Path of the OG image, e.g. /og/reelmark.png. Every page has one. */
   ogImage?: string;
+  /** 'article' for build notes, 'website' for everything else. */
+  ogType?: 'website' | 'article';
+  /** ISO date of an article, emitted as article:published_time. */
+  published?: string;
   /** JSON-LD object(s) to embed, already shaped. */
   jsonLd?: object | object[];
   noindex?: boolean;
@@ -20,6 +24,8 @@ const {
   title = `${site.name}: ${site.tagline}`,
   description = site.description,
   ogImage = '/og/home.png',
+  ogType = 'website',
+  published,
   jsonLd,
   noindex = false,
 } = Astro.props;
@@ -32,24 +38,26 @@ const ogImageUrl = absolute(ogImage);
 
 const navLinks = [
   { href: '/#apps', label: 'Apps' },
-  { href: '/writing', label: 'Writing' },
-  { href: '/about', label: 'About' },
+  { href: '/writing/', label: 'Writing' },
+  { href: '/about/', label: 'About' },
   { href: '/#contact', label: 'Contact' },
 ];
 
 const footerLinks = [
-  { href: '/about', label: 'About' },
-  { href: '/writing', label: 'Writing' },
-  { href: '/legal/terms', label: 'Terms' },
-  { href: '/legal/privacy', label: 'Privacy' },
-  { href: '/legal/refunds', label: 'Refunds' },
-  { href: '/legal/shipping', label: 'Delivery' },
-  { href: '/legal/pricing', label: 'Pricing' },
-  { href: '/legal/contact', label: 'Contact' },
+  { href: '/about/', label: 'About' },
+  { href: '/writing/', label: 'Writing' },
+  { href: '/legal/terms/', label: 'Terms' },
+  { href: '/legal/privacy/', label: 'Privacy' },
+  { href: '/legal/refunds/', label: 'Refunds' },
+  { href: '/legal/shipping/', label: 'Delivery' },
+  { href: '/legal/pricing/', label: 'Pricing' },
+  { href: '/legal/contact/', label: 'Contact' },
 ];
 
-const isCurrent = (href: string) => href === path;
+const isCurrent = (href: string) => href.replace(/\/$/, '') === path;
 const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+// "<" is escaped so no content string can close the script element early.
+const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
 ---
 
 <!doctype html>
@@ -67,7 +75,7 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <meta name="theme-color" content="#fbfbf9" />
     {!noindex && <link rel="canonical" href={canonical} />}
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -75,11 +83,13 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    {published && <meta property="article:published_time" content={published} />}
+    {published && <meta property="article:author" content={site.founder.name} />}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
-    {ld.map((obj) => <script type="application/ld+json" set:html={JSON.stringify(obj)} />)}
+    {ld.map((obj) => <script type="application/ld+json" set:html={ldJson(obj)} />)}
   </head>
   <body>
     <header class="nav" id="nav">

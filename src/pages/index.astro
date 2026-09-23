@@ -5,9 +5,11 @@ import Strip from '../components/Strip.astro';
 import AppRow from '../components/AppRow.astro';
 import ProductTile from '../components/ProductTile.astro';
 import Founder from '../components/Founder.astro';
+import PostItem from '../components/PostItem.astro';
 import Socials from '../components/Socials.astro';
 import { listing, screens } from '../lib/appstore';
-import { site, longDate } from '../lib/site';
+import { site } from '../lib/site';
+import { portraitUrl } from '../lib/portrait';
 import { organization, person, website } from '../lib/jsonld';
 
 const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
@@ -31,7 +33,7 @@ const heroShots = [0, 1].flatMap((i) =>
 );
 ---
 
-<Base jsonLd={[organization(), person(), website()]}>
+<Base jsonLd={[organization(), person(await portraitUrl()), website()]}>
   <section class="hero">
     <div class="container">
       <p class="kicker hero__kicker">{site.name} is a one-person app studio in Bengaluru.</p>
@@ -42,7 +44,7 @@ const heroShots = [0, 1].flatMap((i) =>
       </p>
       <div class="hero__actions">
         <a href="#apps" class="btn">See the apps</a>
-        <a href="/writing" class="btn btn--ghost">Read the build notes</a>
+        <a href="/writing/" class="btn btn--ghost">Read the build notes</a>
       </div>
       <p class="hero__creds">Previously at PhonePe and Blinkit. IIT Kharagpur.</p>
       <Strip shots={heroShots} variant="hero" eager={4} />
@@ -81,7 +83,7 @@ const heroShots = [0, 1].flatMap((i) =>
           starting {site.name} to build his own things. Every app on this page is his work, from the first sketch to
           the store listing.
         </p>
-        <p><a class="link" href="/about">More about Krithick and how the studio works</a></p>
+        <p><a class="link" href="/about/">More about Krithick and how the studio works</a></p>
       </Founder>
     </div>
   </section>
@@ -94,17 +96,7 @@ const heroShots = [0, 1].flatMap((i) =>
           <p class="kicker">Build notes: what shipped, what broke, what it took.</p>
         </div>
         <div class="posts">
-          {posts.map((p) => (
-            <article class="post-item">
-              <div>
-                <h3 class="post-item__title"><a class="link" href={`/writing/${p.id}`}>{p.data.title}</a></h3>
-                <p class="post-item__desc">{p.data.description}</p>
-              </div>
-              <time class="post-item__date" datetime={p.data.date.toISOString().slice(0, 10)}>
-                {longDate(p.data.date.toISOString().slice(0, 10))}
-              </time>
-            </article>
-          ))}
+          {posts.map((p) => <PostItem post={p} />)}
         </div>
       </div>
     </section>

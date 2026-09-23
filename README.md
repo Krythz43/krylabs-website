@@ -38,7 +38,8 @@ ssh leadoven 'cd /opt/krylabs-website && git pull && npm ci && npm run build'
 
 `dist/` is gitignored, so the build runs on the droplet. Caddy serves the files directly, no
 service restart needed. The build needs no network: fonts, screenshots and store data are all
-committed.
+committed. Every package is a `dependency` (none are dev-only) because all of them are needed
+to build, and a `NODE_ENV=production` install must not skip any.
 
 ## Where things live
 
@@ -74,6 +75,7 @@ src/
 │   └── legal/             # company legal: terms, privacy, refunds, shipping, pricing, contact
 └── styles/global.css      # the whole design system
 scripts/sync-appstore.mjs  # pulls listing data + screenshots from the iTunes lookup API
+scripts/make-logo.mjs      # renders public/logo.png (the Organization logo in JSON-LD)
 public/                    # copied verbatim into dist/ (see below)
 server.js                  # zero-dependency static server (fallback; Caddy is the origin)
 ```
@@ -83,7 +85,8 @@ server.js                  # zero-dependency static server (fallback; Caddy is t
 1. Edit or add `src/content/apps/<slug>.md`. The slug is the URL.
 2. If it is on the App Store, add its track id to `APPS` in `scripts/sync-appstore.mjs`, run
    `npm run sync`, and commit `src/data/appstore.json` + `src/assets/appstore/<slug>/`.
-3. Put the icon at `src/assets/icons/<slug>.<ext>`; the OG image finds it by that name.
+3. Put the icon under `src/assets/icons/` and reference it from the entry's `icon:` field; the
+   page, the home row and the OG image all use that one import.
 
 Store facts on the site (version, updated date, price, minimum OS, screenshots) all come from
 the snapshot, so a new release is `npm run sync` + commit + deploy.

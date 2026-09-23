@@ -4,6 +4,7 @@ import Founder from '../components/Founder.astro';
 import Defs from '../components/Defs.astro';
 import Socials from '../components/Socials.astro';
 import { site } from '../lib/site';
+import { portraitUrl } from '../lib/portrait';
 import { person, organization } from '../lib/jsonld';
 
 const principles = [
@@ -16,7 +17,7 @@ const principles = [
 const description = `${site.name} is an independent app and product studio founded by ${site.founder.name} in Bengaluru, India.`;
 ---
 
-<Base title={`About ${site.name}`} description={description} ogImage="/og/about.png" jsonLd={[person(), organization()]}>
+<Base title={`About ${site.name}`} description={description} ogImage="/og/about.png" jsonLd={[person(await portraitUrl()), organization()]}>
   <section class="page">
     <div class="container">
       <p class="kicker hero__kicker">About</p>
@@ -40,7 +41,7 @@ const description = `${site.name} is an independent app and product studio found
           App Store, and GymWhiteBoard, LeadOven, Galentini and Comet on the web. He designs, builds, tests and
           publishes each one himself, and answers the support email.
         </p>
-        <p style="margin-top:22px"><Socials /></p>
+        <div class="founder__socials"><Socials /></div>
       </Founder>
     </div>
   </section>

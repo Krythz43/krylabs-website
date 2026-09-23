@@ -1,0 +1,48 @@
+// Renders public/logo.png: the Organization logo referenced from JSON-LD. Structured-data
+// consumers want a raster/SVG at 112px or larger, and the favicon is an .ico, so this
+// draws a 512px mark once with the same renderer the OG images use.
+//
+//   node scripts/make-logo.mjs
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import satori from 'satori';
+import { Resvg } from '@resvg/resvg-js';
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const inter = await fs.readFile(path.join(ROOT, 'src/assets/fonts/og/Inter-SemiBold.ttf'));
+
+const tree = {
+  type: 'div',
+  props: {
+    style: {
+      width: 512,
+      height: 512,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#17160f',
+      borderRadius: 112,
+      color: '#fbfbf9',
+      fontFamily: 'Inter',
+      fontSize: 320,
+      fontWeight: 600,
+      letterSpacing: '-0.04em',
+      position: 'relative',
+    },
+    children: [
+      { type: 'div', props: { style: { marginTop: -20 }, children: 'K' } },
+      { type: 'div', props: { style: { position: 'absolute', right: 96, bottom: 96, width: 56, height: 56, borderRadius: 56, background: '#bf4d2e' } } },
+    ],
+  },
+};
+
+const svg = await satori(tree, {
+  width: 512,
+  height: 512,
+  fonts: [{ name: 'Inter', data: inter, weight: 600, style: 'normal' }],
+});
+const png = new Resvg(svg, { fitTo: { mode: 'width', value: 512 } }).render().asPng();
+const out = path.join(ROOT, 'public/logo.png');
+await fs.writeFile(out, png);
+console.log(`wrote ${path.relative(ROOT, out)} (${png.length} bytes)`);

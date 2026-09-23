@@ -34,11 +34,13 @@ const screenshotUrls = await Promise.all(
   shots.map(async (img) => absolute((await getImage({ src: img, width: 640 })).src)),
 );
 
-const requires = (() => {
-  if (!store) return null;
-  const base = d.platforms.includes('Android') ? 'iOS' : d.platforms.includes('iPhone') ? 'iOS' : null;
-  return base ? `Requires ${base} ${store.minimumOs} or later` : null;
-})();
+// The listing's minimum OS is the iOS floor; Android has no equivalent in the lookup data.
+const requires = store && d.platforms.includes('iPhone') ? `Requires iOS ${store.minimumOs} or later` : null;
+
+// Section ids double as anchors the legacy legal pages link to (e.g. /blockbud/#getting-started).
+// The first section is always #inside, the target of the "See what's inside" button.
+const sectionId = (heading: string, i: number) =>
+  i === 0 ? 'inside' : heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 const title = `${d.name}: ${d.tagline} | ${site.name}`;
 ---
@@ -49,13 +51,13 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
       <div class="page__id">
         <Image class="page__icon" src={d.icon} alt="" width={128} height={128} loading="eager" />
         <div>
-          <p style="font-weight:600">{d.name}</p>
+          <p class="page__name">{d.name}</p>
           <p class="kicker">{d.tagline}</p>
         </div>
       </div>
       <h1 class="display">{d.hero.title}</h1>
       <p class="lead page__lead">{d.hero.lead}</p>
-      <div class="page__actions">
+      <div class="page__actions" id="download">
         {primary && (
           <a href={primary.href} class="btn" {...(external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
         )}
@@ -75,7 +77,7 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
   </section>
 
   {d.sections.map((s, i) => (
-    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={i === 0 ? 'inside' : undefined}>
+    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={sectionId(s.heading, i)}>
       <div class="container">
         <div class="section__head">
           <h2 class="display">{s.heading}</h2>
@@ -88,13 +90,13 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
   {d.statement && (
     <section class="section">
       <div class="container">
-        <p class="display statement h3">{d.statement.text}</p>
+        <p class="display statement">{d.statement.text}</p>
         {d.statement.sub && <p class="statement__sub">{d.statement.sub}</p>}
       </div>
     </section>
   )}
 
-  <section class="section section--soft">
+  <section class="section section--soft" id="support">
     <div class="container">
       <div class="section__head">
         <h2 class="display">Support{d.legal ? ' and the fine print' : ''}</h2>
@@ -106,8 +108,3 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
     </div>
   </section>
 </Base>
-
-<style>
-  /* Statement uses the h3 size of the display scale. */
-  .statement.h3 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
-</style>

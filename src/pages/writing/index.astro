@@ -1,7 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import { site, longDate } from '../../lib/site';
+import PostItem from '../../components/PostItem.astro';
+import { site } from '../../lib/site';
 
 const posts = (await getCollection('posts')).sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 const description = `Build notes from ${site.name}: what shipped, what broke, and what it took to fix.`;
@@ -19,17 +20,7 @@ const description = `Build notes from ${site.name}: what shipped, what broke, an
   <section class="section">
     <div class="container">
       <div class="posts">
-        {posts.map((p) => (
-          <article class="post-item">
-            <div>
-              <h2 class="post-item__title"><a class="link" href={`/writing/${p.id}`}>{p.data.title}</a></h2>
-              <p class="post-item__desc">{p.data.description}</p>
-            </div>
-            <time class="post-item__date" datetime={p.data.date.toISOString().slice(0, 10)}>
-              {longDate(p.data.date.toISOString().slice(0, 10))}
-            </time>
-          </article>
-        ))}
+        {posts.map((p) => <PostItem post={p} level="h2" />)}
       </div>
     </div>
   </section>

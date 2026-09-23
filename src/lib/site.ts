@@ -34,21 +34,21 @@ export function absolute(path: string): string {
   return new URL(path, site.url).href;
 }
 
+/** A Date or an ISO "YYYY-MM-DD" string → "YYYY-MM-DD". */
+export function isoDate(d: Date | string): string {
+  return typeof d === 'string' ? d : d.toISOString().slice(0, 10);
+}
+
+function fmt(d: Date | string, opts: Intl.DateTimeFormatOptions): string {
+  return new Date(isoDate(d) + 'T00:00:00Z').toLocaleDateString('en-GB', { ...opts, timeZone: 'UTC' });
+}
+
 /** "2026-08-10" → "August 2026". Month granularity is all a listing date needs. */
-export function monthYear(iso: string): string {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+export function monthYear(d: Date | string): string {
+  return fmt(d, { month: 'long', year: 'numeric' });
 }
 
 /** "2026-08-10" → "10 August 2026". */
-export function longDate(iso: string): string {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+export function longDate(d: Date | string): string {
+  return fmt(d, { day: 'numeric', month: 'long', year: 'numeric' });
 }

@@ -2,7 +2,7 @@
 // screenshot files it downloaded, resolved to Astro image imports so <Image> can
 // resize and serve them like any other asset.
 import type { ImageMetadata } from 'astro';
-import data from '../data/appstore.json';
+import snapshot from '../data/appstore.json';
 
 export interface Listing {
   id: number;
@@ -20,7 +20,7 @@ export interface Listing {
   screenshots: string[];
 }
 
-const listings = data as unknown as Record<string, Listing | string>;
+const apps: Record<string, Listing> = snapshot.apps;
 
 const files = import.meta.glob<ImageMetadata>('/src/assets/appstore/*/*.webp', {
   eager: true,
@@ -28,8 +28,7 @@ const files = import.meta.glob<ImageMetadata>('/src/assets/appstore/*/*.webp', {
 });
 
 export function listing(slug: string): Listing | undefined {
-  const l = listings[slug];
-  return typeof l === 'object' ? l : undefined;
+  return apps[slug];
 }
 
 /** Screenshot images for an app, in store order. Empty for apps that are not listed. */

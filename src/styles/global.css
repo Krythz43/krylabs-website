@@ -37,8 +37,11 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Cross-document view transitions: a soft crossfade between pages, no JS. */
-@view-transition { navigation: auto; }
+/* Cross-document view transitions: a soft crossfade between pages, no JS. Off for
+   people who asked for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -46,7 +49,12 @@ html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   scroll-behavior: smooth;
+  /* In-page anchors land below the sticky nav instead of under it. */
+  scroll-padding-top: 80px;
 }
+/* The hero strip bleeds past the container using 100vw, which includes a classic
+   scrollbar's width; clipping here keeps that from becoming a horizontal page scroll. */
+html, body { overflow-x: clip; }
 
 body {
   font-family: var(--font-sans);
@@ -151,7 +159,6 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 
 /* ----------------------------- Sections ----------------------------- */
 .section { padding: 88px 0; }
-.section--tight { padding: 56px 0; }
 .section--soft { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 40px; }
 .section__head .kicker { flex: 0 0 auto; }
@@ -205,9 +212,21 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 }
 
 @media (min-width: 1140px) {
-  /* Let the strip run past the container's right edge on wide viewports. */
-  .strip { margin-right: calc(-1 * (100vw - var(--container)) / 2 - var(--gutter)); padding-right: 40px; }
+  /* Let the scrolling strips run past the container's right edge on wide viewports. */
+  .strip--hero, .strip--page { margin-right: calc(-1 * (100vw - var(--container)) / 2 - var(--gutter)); padding-right: 40px; }
 }
+
+/* Beside an app row: two shots, no scrolling, no bleed. */
+.strip--row {
+  --shot-w: 200px;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding: 0;
+  margin: 0;
+  gap: 14px;
+  justify-content: flex-end;
+}
+.strip--row .strip__shot { flex: 0 1 var(--shot-w); box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
 
 /* ----------------------------- App rows (home) ----------------------------- */
 .rows { border-top: 1px solid var(--line); }
@@ -227,10 +246,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 .row__meta { margin-top: 16px; font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
 .row__meta span + span::before { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 4px; background: var(--line-strong); margin: 0 10px; vertical-align: middle; }
 .row__links { margin-top: 20px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-.row__shots { display: flex; gap: 14px; justify-content: flex-end; }
-.row__shots .strip__shot { flex: 0 1 200px; box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
-.row--coming .row__shots { display: none; }
-.row--coming { grid-template-columns: 1fr; }
+.row--single { grid-template-columns: 1fr; }
 
 /* ----------------------------- Web product tiles ----------------------------- */
 .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
@@ -261,6 +277,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 .founder__body p + p { margin-top: 14px; }
 .founder__body > p { color: var(--ink-2); line-height: 1.65; max-width: 60ch; }
 .founder__body .founder__name + .founder__role + p { margin-top: 18px; }
+.founder__socials { margin-top: 22px; }
 
 /* ----------------------------- Definition lists (features, FAQ) ----------------------------- */
 .defs { border-top: 1px solid var(--line); }
@@ -277,7 +294,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 .defs__item .link { font-weight: 600; }
 
 /* ----------------------------- Statement ----------------------------- */
-.statement { max-width: 24ch; }
+.statement { max-width: 24ch; font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
 .statement__sub { margin-top: 18px; color: var(--muted); max-width: 52ch; }
 
 /* ----------------------------- Writing ----------------------------- */
@@ -334,6 +351,8 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 
 /* ----------------------------- Inner page hero ----------------------------- */
 .page { padding: 72px 0 0; }
+.page--end { padding-bottom: 90px; }
+.page__name { font-weight: 600; }
 .page__id { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
 .page__icon { width: 64px; height: 64px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; }
 .page__lead { margin-top: 24px; }
@@ -352,8 +371,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 /* ----------------------------- Responsive ----------------------------- */
 @media (max-width: 900px) {
   .row { grid-template-columns: 1fr; gap: 28px; }
-  .row__shots { justify-content: flex-start; }
-  .row__shots .strip__shot { flex: 0 1 180px; }
+  .strip--row { --shot-w: 180px; justify-content: flex-start; }
   .founder--wide { grid-template-columns: 220px minmax(0, 1fr); gap: 36px; }
 }
 
