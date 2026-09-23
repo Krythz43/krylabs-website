@@ -81,6 +81,9 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
            box and spilled over the side padding, so the rows ran edge-to-edge on a
            phone. A grid area respects the padding. */
         display: grid;
+        /* Chooser centred in the free space, copyright parked at the bottom — the
+           footer must not pull the buttons off centre. */
+        grid-template-rows: 1fr auto;
         place-items: center;
         padding: 32px 24px;
         background: var(--bg);
@@ -94,6 +97,37 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
       :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
 
       .wrap { width: 100%; max-width: 460px; text-align: center; }
+
+      /* Way back to krylabs.com. Fixed in the corner rather than in the flow, and
+         quiet by default: this page exists to get someone into a store, so the mark
+         must never compete with the two buttons. 30px keeps it clear of the 460px
+         column at every width; the tap target is the whole square. */
+      .home {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--card);
+        color: var(--ink-3);
+        font-size: 0.82rem;
+        font-weight: 600;
+        line-height: 1;
+        opacity: 0.6;
+        transition: opacity 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .home:hover { opacity: 1; border-color: var(--ink); color: var(--ink); }
+
+      .foot {
+        margin-top: 32px;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
       .eyebrow {
         font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 0.7rem;
@@ -191,6 +225,8 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     </style>
   </head>
   <body>
+    <a class="home" href="/" title="krylabs.com" aria-label="Krylabs home">K</a>
+
     <main class="wrap">
       <p class="eyebrow">BubbleNest</p>
       <h1>Get the <em>app</em>.</h1>
@@ -229,6 +265,8 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
 
       <pre class="debug" id="debug" hidden></pre>
     </main>
+
+    <footer class="foot">&copy; 2026 Krylabs</footer>
 
     <script is:inline define:vars={{ IOS_URL, ANDROID_URL, IOS_SCHEME_URL, IOS_SAFARI_ESCAPE_URL }}>
       (function () {
