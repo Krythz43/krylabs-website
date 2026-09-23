@@ -53,7 +53,7 @@ src/
 ├── data/appstore.json     # App Store snapshot written by `npm run sync` (committed)
 ├── assets/
 │   ├── appstore/<slug>/   # 640px WebP screenshots from the store listing (committed, via sync)
-│   ├── icons/             # app icons (jpg from the stores, svg for web products)
+│   ├── icons/             # app icons (png/jpg, see below) and svg marks for web products
 │   ├── products/          # one screenshot of each web product's live site
 │   ├── fonts/og/          # TTFs for the OG renderer only (the site itself uses @fontsource)
 │   └── krithick-santhosh.jpg
@@ -85,8 +85,10 @@ server.js                  # zero-dependency static server (fallback; Caddy is t
 1. Edit or add `src/content/apps/<slug>.md`. The slug is the URL.
 2. If it is on the App Store, add its track id to `APPS` in `scripts/sync-appstore.mjs`, run
    `npm run sync`, and commit `src/data/appstore.json` + `src/assets/appstore/<slug>/`.
-3. Put the icon under `src/assets/icons/` and reference it from the entry's `icon:` field; the
-   page, the home row and the OG image all use that one import.
+3. Put the icon under `src/assets/icons/` as a **PNG or JPEG** and reference it from the entry's
+   `icon:` field; the page, the home row and the OG image all use that one import. It cannot be an
+   SVG: the content layer turns SVGs into components with no file path, and the OG renderer
+   needs the file. (Web product icons are not used in OG images, so those can stay SVG.)
 
 Store facts on the site (version, updated date, price, minimum OS, screenshots) all come from
 the snapshot, so a new release is `npm run sync` + commit + deploy.

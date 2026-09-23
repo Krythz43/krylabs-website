@@ -2,7 +2,7 @@
 name: One
 tagline: Day planner, one task at a time
 summary: A calm planner and habit tracker for iPhone, iPad and Mac. Plan a task for three days out, forget it, and get reminded when it is time.
-icon: ../../assets/icons/one.svg
+icon: ../../assets/icons/one.png
 platforms: [iPhone, iPad, Mac]
 status: in-development
 order: 5
