@@ -1,0 +1,65 @@
+---
+// One app on the home page: identity and copy on the left, two real screenshots on the right.
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { listing, screens } from '../lib/appstore';
+import { monthYear } from '../lib/site';
+
+interface Props {
+  app: CollectionEntry<'apps'>;
+}
+
+const { app } = Astro.props;
+const d = app.data;
+const store = listing(app.id);
+const shots = screens(app.id).slice(0, 2);
+const coming = d.status === 'in-development';
+const href = `/${app.id}`;
+
+const primary = d.download ?? (store ? { label: 'App Store', href: store.storeUrl } : null);
+---
+
+<article class={`row${coming ? ' row--coming' : ''}`} id={app.id}>
+  <div>
+    <div class="row__id">
+      <Image class="row__icon" src={d.icon} alt="" width={112} height={112} loading="lazy" />
+      <div>
+        <h3 class="row__name"><a href={href}>{d.name}</a></h3>
+        <p class="row__tag">{d.tagline}</p>
+      </div>
+    </div>
+    <p class="row__desc">{d.summary}</p>
+    <p class="row__meta">
+      <span>{d.platforms.join(', ')}</span>
+      {store && <span>Version {store.version}, updated {monthYear(store.updated)}</span>}
+      {store && <span>{store.formattedPrice}</span>}
+      {coming && <span>In development</span>}
+    </p>
+    <p class="row__links">
+      <a class="link" href={href}>About {d.name}</a>
+      {primary && (
+        <a
+          class="link link--quiet"
+          href={primary.href}
+          {...(primary.href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {})}
+        >{primary.label}</a>
+      )}
+    </p>
+  </div>
+  {shots.length > 0 && (
+    <div class="row__shots">
+      {shots.map((img, i) => (
+        <figure class="strip__shot">
+          <Image
+            src={img}
+            alt={`${d.name} screenshot ${i + 1}`}
+            widths={[200, 400]}
+            sizes="200px"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+      ))}
+    </div>
+  )}
+</article>

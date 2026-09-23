@@ -1,0 +1,113 @@
+---
+// One page per app, at /<slug>. Copy comes from src/content/apps/<slug>.md; store facts
+// and screenshots from the committed App Store snapshot (npm run sync).
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Strip from '../components/Strip.astro';
+import Defs from '../components/Defs.astro';
+import { listing, screens } from '../lib/appstore';
+import { site, absolute, longDate } from '../lib/site';
+import { softwareApplication } from '../lib/jsonld';
+
+export async function getStaticPaths() {
+  const apps = await getCollection('apps');
+  return apps.map((app) => ({ params: { app: app.id }, props: { app } }));
+}
+
+interface Props {
+  app: CollectionEntry<'apps'>;
+}
+
+const { app } = Astro.props;
+const d = app.data;
+const store = listing(app.id);
+const shots = screens(app.id);
+const coming = d.status === 'in-development';
+
+const primary = d.download ?? (store ? { label: 'Download on the App Store', href: store.storeUrl } : null);
+const external = primary ? primary.href.startsWith('http') : false;
+
+// The store's own screenshot files at a fixed width, for structured data.
+const screenshotUrls = await Promise.all(
+  shots.map(async (img) => absolute((await getImage({ src: img, width: 640 })).src)),
+);
+
+const requires = (() => {
+  if (!store) return null;
+  const base = d.platforms.includes('Android') ? 'iOS' : d.platforms.includes('iPhone') ? 'iOS' : null;
+  return base ? `Requires ${base} ${store.minimumOs} or later` : null;
+})();
+
+const title = `${d.name}: ${d.tagline} | ${site.name}`;
+---
+
+<Base title={title} description={d.summary} ogImage={`/og/${app.id}.png`} jsonLd={softwareApplication(app, store, screenshotUrls)}>
+  <section class="page">
+    <div class="container">
+      <div class="page__id">
+        <Image class="page__icon" src={d.icon} alt="" width={128} height={128} loading="eager" />
+        <div>
+          <p style="font-weight:600">{d.name}</p>
+          <p class="kicker">{d.tagline}</p>
+        </div>
+      </div>
+      <h1 class="display">{d.hero.title}</h1>
+      <p class="lead page__lead">{d.hero.lead}</p>
+      <div class="page__actions">
+        {primary && (
+          <a href={primary.href} class="btn" {...(external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
+        )}
+        <a href="#inside" class="btn btn--ghost">See what's inside</a>
+      </div>
+      <p class="page__facts">
+        <span>{d.platforms.join(', ')}</span>
+        {coming && <span>In development</span>}
+        {store && <span>Version {store.version}, updated {longDate(store.updated)}</span>}
+        {requires && <span>{requires}</span>}
+        {store && <span>{store.formattedPrice}</span>}
+      </p>
+      {shots.length > 0 && (
+        <Strip shots={shots.map((img, i) => ({ img, alt: `${d.name} screenshot ${i + 1}` }))} variant="page" eager={3} />
+      )}
+    </div>
+  </section>
+
+  {d.sections.map((s, i) => (
+    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={i === 0 ? 'inside' : undefined}>
+      <div class="container">
+        <div class="section__head">
+          <h2 class="display">{s.heading}</h2>
+        </div>
+        <Defs items={s.items} numbered={s.numbered} />
+      </div>
+    </section>
+  ))}
+
+  {d.statement && (
+    <section class="section">
+      <div class="container">
+        <p class="display statement h3">{d.statement.text}</p>
+        {d.statement.sub && <p class="statement__sub">{d.statement.sub}</p>}
+      </div>
+    </section>
+  )}
+
+  <section class="section section--soft">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Support{d.legal ? ' and the fine print' : ''}</h2>
+        <p class="kicker">
+          Questions about {d.name}? Email <a class="link" href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+      </div>
+      {d.legal && <Defs items={d.legal} />}
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Statement uses the h3 size of the display scale. */
+  .statement.h3 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
+</style>

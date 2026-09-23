@@ -15,6 +15,11 @@
 //
 // Desktop and anything unrecognised get the plain chooser: a wrong guess sends someone to
 // a store they cannot install from, which is worse than one extra tap.
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource/instrument-serif/400-italic.css';
+
 const IOS_URL = 'https://apps.apple.com/app/bubblenest-friend-finding-app/id6743532224';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.krylabs.bubblenest';
 // Not a guess: this is verbatim what apps.apple.com 301s an iPhone user-agent to. Apple
@@ -39,7 +44,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     <meta name="description" content="Get BubbleNest on iPhone or Android — one link, the right store." />
     <!-- A redirect stub has nothing to index; keep /bubblenest as the canonical page. -->
     <meta name="robots" content="noindex, follow" />
-    <link rel="canonical" href="https://krylabs.com/bubblenest" />
+    <link rel="canonical" href="https://krylabs.com/bubblenest/" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#fbfbf9" />
     <meta property="og:type" content="website" />
@@ -48,14 +53,6 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
     <meta property="og:description" content="Make friends through what you're into right now. Free on iPhone and Android." />
     <meta property="og:url" content="https://krylabs.com/bubblenest/download" />
     <meta name="twitter:card" content="summary_large_image" />
-    <!-- Webfonts are a progressive nicety; font-display:swap keeps them off the critical
-         path so the buttons are readable (in fallback faces) in the first paint. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap"
-      rel="stylesheet"
-    />
 
     <!-- is:global is load-bearing. Scoped styles compile `* { padding: 0 }` into
          `[data-astro-cid-…] { padding: 0 }` — an attribute selector that outranks plain
@@ -129,11 +126,8 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
         color: var(--muted);
       }
       .eyebrow {
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--accent);
+        font-size: 0.95rem;
+        color: var(--muted);
       }
       h1 {
         margin: 14px 0 12px;
@@ -214,7 +208,7 @@ const IOS_SAFARI_ESCAPE_URL = 'x-safari-' + IOS_URL;
         border-radius: 10px;
         background: var(--card);
         color: var(--ink-3);
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 11px;
         line-height: 1.5;
         text-align: left;

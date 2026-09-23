@@ -1,0 +1,27 @@
+---
+// A list of title + text pairs with hairlines. Numbered only when the content is a sequence.
+interface Item {
+  t: string;
+  d: string;
+  href?: string;
+}
+
+interface Props {
+  items: Item[];
+  numbered?: boolean;
+}
+
+const { items, numbered = false } = Astro.props;
+---
+
+<div class="defs">
+  {items.map((it, i) => (
+    <div class="defs__item">
+      <h3>
+        {numbered && <span class="num">{i + 1}</span>}
+        {it.href ? <a class="link" href={it.href}>{it.t}</a> : it.t}
+      </h3>
+      <p>{it.d}</p>
+    </div>
+  ))}
+</div>
