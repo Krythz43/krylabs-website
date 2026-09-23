@@ -8,7 +8,7 @@ import Founder from '../components/Founder.astro';
 import PostItem from '../components/PostItem.astro';
 import Socials from '../components/Socials.astro';
 import { getApps, onAppStore, onGooglePlay, shotsFor } from '../lib/apps';
-import { site, credentials } from '../lib/site';
+import { site, credentials, workHistory } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { organization, person, website } from '../lib/jsonld';
 
@@ -24,8 +24,8 @@ const num = (n: number) => words[n] ?? String(n);
 
 // Hero strip: one screenshot from each featured app, then a second from each, so the
 // first screenful shows every app rather than six views of one.
-const featured = apps.filter((a) => a.data.featured);
-const heroShots = [0, 1].flatMap((i) => featured.flatMap((a) => shotsFor(a, 2).slice(i, i + 1)));
+const perApp = apps.filter((a) => a.data.featured).map((a) => shotsFor(a, 2));
+const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i, i + 1)));
 ---
 
 <Base jsonLd={[organization(), person(await portraitUrl()), website()]}>
@@ -74,8 +74,8 @@ const heroShots = [0, 1].flatMap((i) => featured.flatMap((a) => shotsFor(a, 2).s
     <div class="container">
       <Founder>
         <p>
-          Krithick is an iOS engineer who worked on payments at PhonePe and quick commerce at Blinkit before
-          starting {site.name} to build his own things. Every app on this page is his work, from the first sketch to
+          Krithick is an iOS engineer who worked on {workHistory} before starting {site.name} to build his own
+          things. Every app on this page is his work, from the first sketch to
           the store listing.
         </p>
         <p><a class="link" href="/about/">More about Krithick and how the studio works</a></p>

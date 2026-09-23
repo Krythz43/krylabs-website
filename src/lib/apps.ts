@@ -6,44 +6,61 @@ import { listing, screens, snapshotSlugs, type Listing } from './appstore';
 
 export type App = CollectionEntry<'apps'>;
 
-// Top-level paths that already exist as pages, directories or files; an app cannot take them.
-const RESERVED_SLUGS = new Set([
-  'about', 'writing', 'privacy', 'terms', 'legal', 'contact', 'og', 'home', '404',
-  'static', 'assets', 'favicon.ico', 'logo.png', 'robots.txt', 'sitemap-index.xml',
-]);
+// Paths an app slug would collide with: a static page at the slug (src/pages/<slug>.astro
+// or <slug>/index.astro, read from the tree at build time; keys only, nothing is imported),
+// a public/ directory that serves its own index at the slug (public/ holds files Vite cannot
+// treat as modules, so those are listed and must follow that directory), the apex paths the
+// Caddyfile proxies to the API (never served from here, whatever the build emits), and the
+// home page's own section ids. A directory that only holds sub-pages, like
+// src/pages/bubblenest/download.astro or public/blockbud/privacy.html, is fine: the app
+// page becomes its index.
+const PAGES = Object.keys(import.meta.glob('/src/pages/**/*.{astro,ts}'))
+  .map((p) => p.replace(/^\/src\/pages\//, ''))
+  .filter((p) => !p.includes('/') || p.endsWith('/index.astro'))
+  .map((p) => p.split('/')[0].replace(/\.[^.]+$/, ''));
+const PUBLIC = ['contact', 'static'];
+const PROXIED = ['api', 'auth', 'config', 'health', 'eventsweb', 'events', 'event-detail', '_next'];
+const HOME_IDS = ['apps', 'web', 'founder', 'writing', 'contact', 'nav'];
+const RESERVED_SLUGS = new Set([...PAGES, ...PUBLIC, ...PROXIED, ...HOME_IDS]);
+
+let cached: Promise<App[]> | undefined;
 
 /**
  * Every app, in display order, after checking that the content entries and the App Store
  * snapshot agree: each `storeId` has a snapshot entry under the same slug with the same
  * id, each snapshot entry has an app that still declares that id, and no slug shadows an
- * existing route. Anything else means `npm run sync` was not run (or committed) after a
+ * existing path. Anything else means `npm run sync` was not run (or committed) after a
  * change, and the build stops here instead of shipping stale or missing store facts.
+ * Loaded and checked once per build, however many routes ask.
  */
-export async function getApps(): Promise<App[]> {
-  const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
-  const bySlug = new Map(apps.map((a) => [a.id, a]));
-  for (const app of apps) {
-    if (RESERVED_SLUGS.has(app.id)) throw new Error(`src/content/apps/${app.id}.md: "${app.id}" is already a route on the site`);
-    const id = app.data.storeId;
-    if (id === undefined) continue;
-    const l = listing(app.id);
-    if (!l) throw new Error(`${app.id} has storeId ${id} but no snapshot entry: run \`npm run sync\` and commit`);
-    if (l.id !== id) throw new Error(`${app.id}: storeId ${id} does not match the snapshot's ${l.id}: run \`npm run sync\``);
-  }
-  for (const slug of snapshotSlugs) {
-    const app = bySlug.get(slug);
-    if (!app) throw new Error(`appstore.json has "${slug}" but src/content/apps/${slug}.md does not exist: run \`npm run sync\``);
-    if (app.data.storeId === undefined) throw new Error(`appstore.json has "${slug}" but its entry no longer declares a storeId: run \`npm run sync\``);
-  }
-  return apps;
+export function getApps(): Promise<App[]> {
+  cached ??= (async () => {
+    const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
+    const bySlug = new Map(apps.map((a) => [a.id, a]));
+    for (const app of apps) {
+      if (RESERVED_SLUGS.has(app.id)) throw new Error(`src/content/apps/${app.id}.md: "${app.id}" is already a path on the site`);
+      const id = app.data.storeId;
+      if (id === undefined) continue;
+      const l = listing(app.id);
+      if (!l) throw new Error(`${app.id} has storeId ${id} but no snapshot entry: run \`npm run sync\` and commit`);
+      if (l.id !== id) throw new Error(`${app.id}: storeId ${id} does not match the snapshot's ${l.id}: run \`npm run sync\``);
+    }
+    for (const slug of snapshotSlugs) {
+      const app = bySlug.get(slug);
+      if (!app) throw new Error(`appstore.json has "${slug}" but src/content/apps/${slug}.md does not exist: run \`npm run sync\``);
+      if (app.data.storeId === undefined) throw new Error(`appstore.json has "${slug}" but its entry no longer declares a storeId: run \`npm run sync\``);
+    }
+    return apps;
+  })();
+  return cached;
 }
 
-/** Live on the App Store: has a listing and is not still in development. */
+/** On the App Store: has a listing. The same test the rows use to show store facts. */
 export function onAppStore(app: App): boolean {
-  return app.data.status === 'live' && listing(app.id) !== undefined;
+  return listing(app.id) !== undefined;
 }
 
-/** Live on Google Play: an Android build of an app that has shipped. */
+/** On Google Play: an Android build of an app that has shipped. */
 export function onGooglePlay(app: App): boolean {
   return app.data.status === 'live' && app.data.platforms.includes('Android');
 }

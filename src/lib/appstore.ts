@@ -2,7 +2,7 @@
 // screenshot files it downloaded, resolved to Astro image imports so <Image> can
 // resize and serve them like any other asset.
 import type { ImageMetadata } from 'astro';
-import snapshot from '../data/appstore.json';
+import snapshot from '../assets/appstore/appstore.json';
 
 export interface Listing {
   id: number;
@@ -22,7 +22,7 @@ export interface Listing {
 
 const apps: Record<string, Listing> = snapshot.apps;
 
-/** Every slug the snapshot knows, for checkSnapshot(). */
+/** Every slug the snapshot knows, for the consistency check in getApps() (src/lib/apps.ts). */
 export const snapshotSlugs: string[] = Object.keys(apps);
 
 const files = import.meta.glob<ImageMetadata>('/src/assets/appstore/*/*.webp', {
@@ -47,7 +47,7 @@ export function screens(slug: string): ImageMetadata[] {
     if (!img) {
       throw new Error(
         `appstore.json lists ${slug}/${f} but src/assets/appstore/${slug}/${f} is missing. ` +
-          'Run `npm run sync` and commit both the JSON and the screenshot directory.',
+          'Run `npm run sync` and commit src/assets/appstore/.',
       );
     }
     return img;

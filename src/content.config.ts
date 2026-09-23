@@ -2,7 +2,7 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 // One entry per app. The file name is the URL: apps/reelmark.md → /reelmark. Store facts
-// (version, price, screenshots) are NOT here; they come from src/data/appstore.json via
+// (version, price, screenshots) are NOT here; they come from src/assets/appstore/appstore.json via
 // `npm run sync`, keyed by the same slug.
 const apps = defineCollection({
   loader: glob({ pattern: '*.md', base: './src/content/apps' }),

@@ -12,7 +12,11 @@ export const site = {
     name: 'Krithick Santhosh',
     role: 'Founder and developer',
     education: 'IIT Kharagpur',
-    previously: ['PhonePe', 'Blinkit'],
+    /** Employers, most recent last, with what he worked on there. */
+    previously: [
+      { name: 'PhonePe', on: 'payments' },
+      { name: 'Blinkit', on: 'quick commerce' },
+    ],
     linkedin: 'https://www.linkedin.com/in/krithick-santhosh/',
     github: 'https://github.com/Krythz43',
     x: 'https://x.com/krithick_n',
@@ -26,8 +30,13 @@ export const site = {
   },
 } as const;
 
+const list = new Intl.ListFormat('en', { type: 'conjunction' });
+
 /** "Previously at PhonePe and Blinkit. IIT Kharagpur." */
-export const credentials = `Previously at ${site.founder.previously.join(' and ')}. ${site.founder.education}.`;
+export const credentials = `Previously at ${list.format(site.founder.previously.map((p) => p.name))}. ${site.founder.education}.`;
+
+/** "payments at PhonePe and quick commerce at Blinkit", for prose. */
+export const workHistory = list.format(site.founder.previously.map((p) => `${p.on} at ${p.name}`));
 
 export const socials = [
   { label: 'LinkedIn', href: site.founder.linkedin },

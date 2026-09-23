@@ -50,9 +50,8 @@ src/
 │   ├── products/*.md      # web products: a tile on the home page, links out
 │   └── posts/*.md         # build notes at /writing/<slug>
 ├── content.config.ts      # the schemas for the three collections
-├── data/appstore.json     # App Store snapshot written by `npm run sync` (committed)
 ├── assets/
-│   ├── appstore/<slug>/   # 640px WebP screenshots from the store listing (committed, via sync)
+│   ├── appstore/          # `npm run sync` output: appstore.json + <slug>/*.webp (640px, committed)
 │   ├── icons/             # app icons (png/jpg, see below) and svg marks for web products
 │   ├── products/          # one screenshot of each web product's live site
 │   └── krithick-santhosh.jpg
@@ -84,8 +83,8 @@ server.js                  # zero-dependency static server (fallback; Caddy is t
 
 1. Edit or add `src/content/apps/<slug>.md`. The slug is the URL.
 2. If it is on the App Store, put its track id in the entry as `storeId:`, run `npm run sync`,
-   and commit `src/data/appstore.json` + `src/assets/appstore/<slug>/`. The build fails if an
-   entry's `storeId` has no matching snapshot, so a forgotten sync cannot ship.
+   and commit `src/assets/appstore/`. The build fails if an entry's `storeId` has no matching
+   snapshot (or the other way round), so a forgotten sync cannot ship.
 3. Put the icon under `src/assets/icons/` as a **PNG or JPEG** and reference it from the entry's
    `icon:` field; the page, the home row and the OG image all use that one import. It cannot be an
    SVG: the content layer turns SVGs into components with no file path, and the OG renderer
@@ -97,7 +96,8 @@ the snapshot, so a new release is `npm run sync` + commit + deploy.
 Each `sections:` entry becomes a section with an anchor id, the slugified heading unless the entry
 sets `id:`. The entries set the ids the previous pages exposed (`#features`, `#how-it-works`,
 `#how`), so old links keep working; the legal block is `#legal` with a `#privacy` anchor. The build
-fails on duplicate or reserved ids, and on an app slug that would shadow an existing route.
+fails on duplicate or reserved ids, and on an app slug that would collide with an existing page,
+a public file, an apex path the Caddyfile proxies to the API, or a home-page section id.
 
 ### `public/` — not just assets
 

@@ -4,12 +4,7 @@
 //   page  - the same on an app page
 //   row   - two shots beside an app row, no scrolling
 import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
-
-interface Shot {
-  img: ImageMetadata;
-  alt: string;
-}
+import type { Shot } from '../lib/apps';
 
 interface Props {
   shots: Shot[];

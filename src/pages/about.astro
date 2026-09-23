@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import Founder from '../components/Founder.astro';
 import Defs from '../components/Defs.astro';
 import Socials from '../components/Socials.astro';
-import { site } from '../lib/site';
+import { site, workHistory } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { person, organization } from '../lib/jsonld';
 
@@ -33,8 +33,8 @@ const description = `${site.name} is an independent app and product studio found
     <div class="container">
       <Founder wide>
         <p>
-          Krithick is an iOS engineer. He studied at IIT Kharagpur, then worked on payments at PhonePe and quick
-          commerce at Blinkit before starting {site.name} to build his own products.
+          Krithick is an iOS engineer. He studied at {site.founder.education}, then worked on {workHistory} before
+          starting {site.name} to build his own products.
         </p>
         <p>
           The studio is where that experience turns into apps: ReelMark, BubbleNest, BlockBud and CocoTree on the

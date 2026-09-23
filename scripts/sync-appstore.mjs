@@ -1,7 +1,7 @@
 // Pulls each app's public App Store listing (version, release date, price, screenshots)
 // into the repo so the site can show real product imagery without any runtime dependency.
 //
-//   npm run sync        # refresh src/data/appstore.json and src/assets/appstore/<slug>/
+//   npm run sync        # refresh src/assets/appstore/ (appstore.json + <slug>/*.webp)
 //
 // Which apps: every src/content/apps/<slug>.md with a `storeId:` in its frontmatter. The
 // file name is the slug, so the content entry is the only place an app is declared.
@@ -10,16 +10,16 @@
 // a listing change is a normal reviewable diff. Screenshot files are 640px WebP straight
 // from Apple's CDN (the `640x0w.webp` size variant), which Astro then resizes per breakpoint.
 //
-// The run is all-or-nothing. The new tree is staged under .astro/ (gitignored, same
-// filesystem), swapped in with two renames, and the old tree is put back if the second
-// rename fails, so an interrupted run leaves either the old tree or the new one.
+// The run is all-or-nothing. The snapshot JSON lives inside the screenshot tree, so the
+// whole result is one directory: it is built under .astro/ (gitignored, same filesystem),
+// the old tree is moved aside, the new one renamed into place, and the old one put back
+// if that rename fails. An interrupted run leaves either the old tree or the new one.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CONTENT_DIR = path.join(ROOT, 'src/content/apps');
-const OUT_JSON = path.join(ROOT, 'src/data/appstore.json');
 const OUT_DIR = path.join(ROOT, 'src/assets/appstore');
 const STAGE = path.join(ROOT, '.astro/appstore-sync');
 const NEW_DIR = path.join(STAGE, 'new');
@@ -45,7 +45,8 @@ for (const file of (await fs.readdir(CONTENT_DIR)).filter((f) => f.endsWith('.md
 }
 if (Object.keys(APPS).length === 0) throw new Error(`no storeId found in ${CONTENT_DIR}`);
 
-// A previous run that died between the two renames leaves the old tree stranded here.
+// A previous run that died between "old moved aside" and "new renamed in" leaves the old
+// tree stranded here. Put it back before doing anything else.
 if (!(await exists(OUT_DIR)) && (await exists(OLD_DIR))) {
   await fs.rename(OLD_DIR, OUT_DIR);
   console.warn('restored src/assets/appstore from an interrupted run');
@@ -94,23 +95,23 @@ try {
     console.log(`${slug}: v${r.version} (${apps[slug].updated}), ${screenshots.length} screenshots`);
   }
 
-  // Everything fetched: stage the snapshot beside the tree, then swap both in. A failure
-  // on either rename puts the old tree back, so JSON and screenshots always match.
+  // Everything fetched: the snapshot goes into the same tree, then one rename swaps it in.
   const snapshot = { syncedAt: new Date().toISOString().slice(0, 10), apps };
-  const NEW_JSON = path.join(STAGE, 'appstore.json');
-  await fs.writeFile(NEW_JSON, JSON.stringify(snapshot, null, 2) + '\n');
+  await fs.writeFile(path.join(NEW_DIR, 'appstore.json'), JSON.stringify(snapshot, null, 2) + '\n');
   if (await exists(OUT_DIR)) await fs.rename(OUT_DIR, OLD_DIR);
   try {
     await fs.rename(NEW_DIR, OUT_DIR);
-    await fs.rename(NEW_JSON, OUT_JSON);
   } catch (e) {
-    await fs.rm(OUT_DIR, { recursive: true, force: true });
-    if (await exists(OLD_DIR)) await fs.rename(OLD_DIR, OUT_DIR);
+    // Put the old tree back whatever happens, and report the original failure.
+    try {
+      if (await exists(OLD_DIR)) await fs.rename(OLD_DIR, OUT_DIR);
+    } catch (restoreError) {
+      console.error('could not restore the previous tree:', restoreError);
+    }
     throw e;
   }
-  console.log(`wrote ${path.relative(ROOT, OUT_JSON)}`);
+  console.log(`wrote ${path.relative(ROOT, OUT_DIR)}/`);
 } finally {
-  // Only the staging area; the old tree is removed here too, but only once the new one is
-  // in place (if the swap failed, OLD_DIR was already moved back above).
+  // Staging (including the old tree) goes only once the new tree is in place.
   if (await exists(OUT_DIR)) await fs.rm(STAGE, { recursive: true, force: true });
 }
