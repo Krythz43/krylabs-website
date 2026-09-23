@@ -94,16 +94,20 @@ try {
     console.log(`${slug}: v${r.version} (${apps[slug].updated}), ${screenshots.length} screenshots`);
   }
 
-  // Everything fetched: swap the trees, then write the snapshot that describes the new one.
+  // Everything fetched: stage the snapshot beside the tree, then swap both in. A failure
+  // on either rename puts the old tree back, so JSON and screenshots always match.
+  const snapshot = { syncedAt: new Date().toISOString().slice(0, 10), apps };
+  const NEW_JSON = path.join(STAGE, 'appstore.json');
+  await fs.writeFile(NEW_JSON, JSON.stringify(snapshot, null, 2) + '\n');
   if (await exists(OUT_DIR)) await fs.rename(OUT_DIR, OLD_DIR);
   try {
     await fs.rename(NEW_DIR, OUT_DIR);
+    await fs.rename(NEW_JSON, OUT_JSON);
   } catch (e) {
+    await fs.rm(OUT_DIR, { recursive: true, force: true });
     if (await exists(OLD_DIR)) await fs.rename(OLD_DIR, OUT_DIR);
     throw e;
   }
-  const snapshot = { syncedAt: new Date().toISOString().slice(0, 10), apps };
-  await fs.writeFile(OUT_JSON, JSON.stringify(snapshot, null, 2) + '\n');
   console.log(`wrote ${path.relative(ROOT, OUT_JSON)}`);
 } finally {
   // Only the staging area; the old tree is removed here too, but only once the new one is

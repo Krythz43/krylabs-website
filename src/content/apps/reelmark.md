@@ -12,6 +12,7 @@ hero:
   lead: That recipe you want to try this weekend. The workout that looks fun. Share a reel from Instagram with "Send to" and ReelMark keeps it, sorted into collections you can search, with your own notes attached.
 sections:
   - heading: How it works
+    id: how
     items:
       - t: Share from Instagram
         d: Found a reel you love? Tap share, then "Send to", and pick ReelMark. The same way you would send it to a friend.

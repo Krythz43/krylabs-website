@@ -3,13 +3,16 @@ export const site = {
   name: 'Krylabs',
   url: 'https://krylabs.com',
   tagline: 'Small apps that do one thing well.',
+  // Deliberately does not list the apps: the collections change, this string would not.
   description:
-    'Krylabs is a one-person app studio in Bengaluru. Krithick Santhosh designs, builds and ships iPhone apps (ReelMark, BubbleNest, BlockBud, CocoTree) and web products (GymWhiteBoard, LeadOven, Galentini, Comet), end to end.',
+    'Krylabs is a one-person app studio in Bengaluru. Krithick Santhosh designs, builds and ships iPhone apps and web products, end to end.',
   email: 'info.krylabs@gmail.com',
   phone: '+91-8597165755',
   founder: {
     name: 'Krithick Santhosh',
     role: 'Founder and developer',
+    education: 'IIT Kharagpur',
+    previously: ['PhonePe', 'Blinkit'],
     linkedin: 'https://www.linkedin.com/in/krithick-santhosh/',
     github: 'https://github.com/Krythz43',
     x: 'https://x.com/krithick_n',
@@ -22,6 +25,9 @@ export const site = {
     country: 'IN',
   },
 } as const;
+
+/** "Previously at PhonePe and Blinkit. IIT Kharagpur." */
+export const credentials = `Previously at ${site.founder.previously.join(' and ')}. ${site.founder.education}.`;
 
 export const socials = [
   { label: 'LinkedIn', href: site.founder.linkedin },

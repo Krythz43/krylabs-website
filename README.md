@@ -62,7 +62,7 @@ src/
 ├── lib/
 │   ├── site.ts            # name, email, address, socials, date helpers
 │   ├── appstore.ts        # reads the snapshot + resolves screenshot imports
-│   ├── apps.ts            # primary link, section ids, snapshot/content consistency check
+│   ├── apps.ts            # getApps() (checked + sorted), primary link, section ids, screenshots
 │   ├── jsonld.ts          # Organization / Person / SoftwareApplication / BlogPosting builders
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/
@@ -95,9 +95,9 @@ Store facts on the site (version, updated date, price, minimum OS, screenshots) 
 the snapshot, so a new release is `npm run sync` + commit + deploy.
 
 Each `sections:` entry becomes a section with an anchor id, the slugified heading unless the entry
-sets `id:`. Set it explicitly when something outside the site links there (the BlockBud legal pages
-under `public/` link to `#inside` and `#getting-started`); the build fails on duplicate or reserved
-ids.
+sets `id:`. The entries set the ids the previous pages exposed (`#features`, `#how-it-works`,
+`#how`), so old links keep working; the legal block is `#legal` with a `#privacy` anchor. The build
+fails on duplicate or reserved ids, and on an app slug that would shadow an existing route.
 
 ### `public/` — not just assets
 

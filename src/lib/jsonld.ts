@@ -65,7 +65,7 @@ export function person(image: string) {
     url: absolute('/about/'),
     image,
     sameAs: [site.founder.linkedin, site.founder.github, site.founder.x],
-    alumniOf: { '@type': 'CollegeOrUniversity', name: 'IIT Kharagpur' },
+    alumniOf: { '@type': 'CollegeOrUniversity', name: site.founder.education },
   };
 }
 

@@ -5,15 +5,15 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { renderOg, type OgSpec } from '../../lib/og';
-import { screens } from '../../lib/appstore';
-import { site } from '../../lib/site';
+import { getApps, shotsFor, type App } from '../../lib/apps';
+import { site, credentials } from '../../lib/site';
 
 export async function getStaticPaths() {
-  const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
+  const apps = await getApps();
   const posts = await getCollection('posts');
-  const paths = (slug: string, n: number) => screens(slug).slice(0, n).map((img) => img.fsPath);
+  const paths = (app: App, n: number) => shotsFor(app, n).map(({ img }) => img.fsPath);
 
-  // The same apps the home hero leads with, one screenshot each.
+  // The apps the home hero leads with, one screenshot each; the card fits three.
   const featured = apps.filter((a) => a.data.featured).slice(0, 3);
 
   const pages: { slug: string; spec: OgSpec }[] = [
@@ -23,7 +23,7 @@ export async function getStaticPaths() {
         kicker: `${site.name}, an independent app studio in Bengaluru`,
         title: site.tagline,
         description: 'iPhone apps and web products, designed, built and shipped by one person.',
-        screenshotPaths: featured.flatMap((a) => paths(a.id, 1)),
+        screenshotPaths: featured.flatMap((a) => paths(a, 1)),
       },
     },
     {
@@ -31,7 +31,7 @@ export async function getStaticPaths() {
       spec: {
         kicker: `About ${site.name}`,
         title: 'An independent studio that ships.',
-        description: `Founded by ${site.founder.name}. Previously at PhonePe and Blinkit. IIT Kharagpur.`,
+        description: `Founded by ${site.founder.name}. ${credentials}`,
       },
     },
     {
@@ -48,7 +48,7 @@ export async function getStaticPaths() {
         title: app.data.hero.title,
         description: app.data.summary,
         iconPath: app.data.icon.fsPath,
-        screenshotPaths: paths(app.id, 3),
+        screenshotPaths: paths(app, 3),
       },
     })),
     ...posts.map((post) => ({

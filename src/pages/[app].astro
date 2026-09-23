@@ -1,32 +1,29 @@
 ---
 // One page per app, at /<slug>. Copy comes from src/content/apps/<slug>.md; store facts
 // and screenshots from the committed App Store snapshot (npm run sync).
-import { getCollection } from 'astro:content';
-import type { CollectionEntry } from 'astro:content';
 import { Image, getImage } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Strip from '../components/Strip.astro';
 import Defs from '../components/Defs.astro';
 import AppFacts from '../components/AppFacts.astro';
-import { listing, screens, snapshotSlugs } from '../lib/appstore';
-import { primaryLink, sectionIds, checkSnapshot, PAGE_IDS } from '../lib/apps';
+import { listing } from '../lib/appstore';
+import { getApps, primaryLink, sectionIds, shotsFor, PAGE_IDS, type App } from '../lib/apps';
 import { site, absolute } from '../lib/site';
-import { softwareApplication } from '../lib/jsonld';
+import { portraitUrl } from '../lib/portrait';
+import { softwareApplication, organization, person } from '../lib/jsonld';
 
 export async function getStaticPaths() {
-  const apps = await getCollection('apps');
-  checkSnapshot(apps, snapshotSlugs);
-  return apps.map((app) => ({ params: { app: app.id }, props: { app } }));
+  return (await getApps()).map((app) => ({ params: { app: app.id }, props: { app } }));
 }
 
 interface Props {
-  app: CollectionEntry<'apps'>;
+  app: App;
 }
 
 const { app } = Astro.props;
 const d = app.data;
 const store = listing(app.id);
-const shots = screens(app.id);
+const shots = shotsFor(app);
 const primary = primaryLink(app, store, true);
 const ids = sectionIds(app);
 
@@ -37,13 +34,15 @@ const insideLabel = firstHeading ? `See ${firstHeading.charAt(0).toLowerCase()}$
 // Screenshot URLs for structured data. 480px is a size the strip below already emits,
 // so this resolves to the same file and adds no transform.
 const screenshotUrls = await Promise.all(
-  shots.map(async (img) => absolute((await getImage({ src: img, width: 480 })).src)),
+  shots.map(async ({ img }) => absolute((await getImage({ src: img, width: 480 })).src)),
 );
 
 const title = `${d.name}: ${d.tagline} | ${site.name}`;
+// The app plus the nodes it refers to by @id, so the graph resolves within this page.
+const jsonLd = [softwareApplication(app, store, screenshotUrls), organization(), person(await portraitUrl())];
 ---
 
-<Base title={title} description={d.summary} ogImage={`/og/${app.id}.png`} jsonLd={softwareApplication(app, store, screenshotUrls)}>
+<Base title={title} description={d.summary} ogImage={`/og/${app.id}.png`} jsonLd={jsonLd}>
   <section class="page">
     <div class="container">
       <div class="page__id">
@@ -62,9 +61,7 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
         {insideLabel && <a href={`#${ids[0]}`} class="btn btn--ghost">{insideLabel}</a>}
       </div>
       <AppFacts app={app} store={store} long />
-      {shots.length > 0 && (
-        <Strip shots={shots.map((img, i) => ({ img, alt: `${d.name} screenshot ${i + 1}` }))} variant="page" eager={3} />
-      )}
+      {shots.length > 0 && <Strip shots={shots} variant="page" eager={3} />}
     </div>
   </section>
 
@@ -97,7 +94,8 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
         </p>
       </div>
       {d.legal && (
-        <div id={PAGE_IDS.privacy}>
+        <div id={PAGE_IDS.legal}>
+          <span id={PAGE_IDS.privacy}></span>
           <Defs items={d.legal} />
         </div>
       )}

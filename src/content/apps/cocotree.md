@@ -12,6 +12,7 @@ hero:
   lead: Too many options is its own kind of hungry. CocoTree asks two things, your mood and your hunger level, and suggests the dish that fits, so you can stop scrolling the menu and order.
 sections:
   - heading: How it works
+    id: how
     items:
       - t: Pick your mood
         d: Comfort, celebration, a slow afternoon. The mood shapes the suggestion.

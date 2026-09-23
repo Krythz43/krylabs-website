@@ -15,6 +15,7 @@ hero:
   lead: Most apps are built for dating, followers or fleeting chats. BubbleNest is for making actual friends. Post a bubble, "anyone up for coffee?", a song you cannot stop playing, a rant that needs company, and connect with the people who feel it too.
 sections:
   - heading: What's inside
+    id: features
     items:
       - t: Bubbles
         d: Share your current mood, activity or interest as a bubble and find the people who catch onto it. Posting is always free and unlimited.
@@ -50,8 +51,8 @@ legal:
     href: /terms/
   - t: Delete your account
     d: Self-service deletion, in the app or right from the browser.
-    href: /bubblenest/delete-account
+    href: /bubblenest/delete-account/
   - t: Child safety standards
     d: Our published standards, enforcement and point of contact.
-    href: /bubblenest/child-safety
+    href: /bubblenest/child-safety/
 ---

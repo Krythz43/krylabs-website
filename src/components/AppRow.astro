@@ -1,22 +1,19 @@
 ---
 // One app on the home page: identity and copy on the left, two real screenshots on the right.
 import { Image } from 'astro:assets';
-import type { CollectionEntry } from 'astro:content';
 import Strip from './Strip.astro';
 import AppFacts from './AppFacts.astro';
-import { listing, screens } from '../lib/appstore';
-import { primaryLink } from '../lib/apps';
+import { listing } from '../lib/appstore';
+import { primaryLink, shotsFor, type App } from '../lib/apps';
 
 interface Props {
-  app: CollectionEntry<'apps'>;
+  app: App;
 }
 
 const { app } = Astro.props;
 const d = app.data;
 const store = listing(app.id);
-const shots = screens(app.id)
-  .slice(0, 2)
-  .map((img, i) => ({ img, alt: `${d.name} screenshot ${i + 1}` }));
+const shots = shotsFor(app, 2);
 const href = `/${app.id}/`;
 const primary = primaryLink(app, store);
 ---

@@ -11,6 +11,7 @@ hero:
   lead: Plan today and the days ahead. Schedule a task for three days later and forget about it. When it is time, One reminds you. Everything syncs through your own iCloud, with no servers in between.
 sections:
   - heading: What's inside
+    id: features
     items:
       - t: Today, first
         d: The app opens on your tasks for today, in a focused list. No dashboards in the way.
