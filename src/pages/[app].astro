@@ -7,8 +7,10 @@ import { Image, getImage } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Strip from '../components/Strip.astro';
 import Defs from '../components/Defs.astro';
+import AppFacts from '../components/AppFacts.astro';
 import { listing, screens } from '../lib/appstore';
-import { site, absolute, longDate } from '../lib/site';
+import { primaryLink, sectionIds } from '../lib/apps';
+import { site, absolute } from '../lib/site';
 import { softwareApplication } from '../lib/jsonld';
 
 export async function getStaticPaths() {
@@ -24,23 +26,14 @@ const { app } = Astro.props;
 const d = app.data;
 const store = listing(app.id);
 const shots = screens(app.id);
-const coming = d.status === 'in-development';
+const primary = primaryLink(app, store, true);
+const ids = sectionIds(app);
 
-const primary = d.download ?? (store ? { label: 'Download on the App Store', href: store.storeUrl } : null);
-const external = primary ? primary.href.startsWith('http') : false;
-
-// The store's own screenshot files at a fixed width, for structured data.
+// Screenshot URLs for structured data. 480px is a size the strip below already emits,
+// so this resolves to the same file and adds no transform.
 const screenshotUrls = await Promise.all(
-  shots.map(async (img) => absolute((await getImage({ src: img, width: 640 })).src)),
+  shots.map(async (img) => absolute((await getImage({ src: img, width: 480 })).src)),
 );
-
-// The listing's minimum OS is the iOS floor; Android has no equivalent in the lookup data.
-const requires = store && d.platforms.includes('iPhone') ? `Requires iOS ${store.minimumOs} or later` : null;
-
-// Section ids double as anchors the legacy legal pages link to (e.g. /blockbud/#getting-started).
-// The first section is always #inside, the target of the "See what's inside" button.
-const sectionId = (heading: string, i: number) =>
-  i === 0 ? 'inside' : heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 const title = `${d.name}: ${d.tagline} | ${site.name}`;
 ---
@@ -59,17 +52,11 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
       <p class="lead page__lead">{d.hero.lead}</p>
       <div class="page__actions" id="download">
         {primary && (
-          <a href={primary.href} class="btn" {...(external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
+          <a href={primary.href} class="btn" {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
         )}
-        <a href="#inside" class="btn btn--ghost">See what's inside</a>
+        {ids.length > 0 && <a href={`#${ids[0]}`} class="btn btn--ghost">See what's inside</a>}
       </div>
-      <p class="page__facts">
-        <span>{d.platforms.join(', ')}</span>
-        {coming && <span>In development</span>}
-        {store && <span>Version {store.version}, updated {longDate(store.updated)}</span>}
-        {requires && <span>{requires}</span>}
-        {store && <span>{store.formattedPrice}</span>}
-      </p>
+      <AppFacts app={app} store={store} long />
       {shots.length > 0 && (
         <Strip shots={shots.map((img, i) => ({ img, alt: `${d.name} screenshot ${i + 1}` }))} variant="page" eager={3} />
       )}
@@ -77,7 +64,7 @@ const title = `${d.name}: ${d.tagline} | ${site.name}`;
   </section>
 
   {d.sections.map((s, i) => (
-    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={sectionId(s.heading, i)}>
+    <section class={`section${i % 2 === 0 ? ' section--soft' : ''}`} id={ids[i]}>
       <div class="container">
         <div class="section__head">
           <h2 class="display">{s.heading}</h2>

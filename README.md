@@ -93,6 +93,11 @@ server.js                  # zero-dependency static server (fallback; Caddy is t
 Store facts on the site (version, updated date, price, minimum OS, screenshots) all come from
 the snapshot, so a new release is `npm run sync` + commit + deploy.
 
+Each `sections:` entry becomes a section with an anchor id, the slugified heading unless the entry
+sets `id:`. Set it explicitly when something outside the site links there (the BlockBud legal pages
+under `public/` link to `#inside` and `#getting-started`); the build fails on duplicate or reserved
+ids.
+
 ### `public/` — not just assets
 
 `public/` holds pages carried over from the pre-Astro site that are **referenced by app store /

@@ -84,7 +84,7 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     {published && <meta property="article:published_time" content={published} />}
-    {published && <meta property="article:author" content={site.founder.name} />}
+    {published && <meta property="article:author" content={absolute('/about/')} />}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />

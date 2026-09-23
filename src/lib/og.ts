@@ -1,13 +1,14 @@
 // Open Graph images, rendered at build time. satori lays out a small element tree with
 // the site's own typefaces, resvg rasterises the SVG, and the endpoint in
 // src/pages/og/[slug].png.ts serves the PNG. No browser involved, so it runs on the droplet.
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import sharp from 'sharp';
-
-const FONT_DIR = path.join(process.cwd(), 'src/assets/fonts/og');
+// The TTFs are inlined by Vite at build time, so rendering does not depend on the
+// working directory or on the files being deployed anywhere.
+import interRegular from '../assets/fonts/og/Inter-Regular.ttf?inline';
+import interSemiBold from '../assets/fonts/og/Inter-SemiBold.ttf?inline';
+import serifRegular from '../assets/fonts/og/InstrumentSerif-Regular.ttf?inline';
 
 export interface OgSpec {
   /** Small line above the title. */
@@ -21,15 +22,16 @@ export interface OgSpec {
   screenshotPaths?: string[];
 }
 
-const fontCache = new Map<string, Promise<ArrayBuffer>>();
-function font(file: string): Promise<ArrayBuffer> {
-  let p = fontCache.get(file);
-  if (!p) {
-    p = fs.readFile(path.join(FONT_DIR, file)).then((b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
-    fontCache.set(file, p);
-  }
-  return p;
+// "data:font/ttf;base64,..." → ArrayBuffer, once per font.
+function font(dataUri: string): ArrayBuffer {
+  const b = Buffer.from(dataUri.slice(dataUri.indexOf(',') + 1), 'base64');
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 }
+const FONTS = [
+  { name: 'Inter', data: font(interRegular), weight: 400 as const, style: 'normal' as const },
+  { name: 'Inter', data: font(interSemiBold), weight: 600 as const, style: 'normal' as const },
+  { name: 'Instrument Serif', data: font(serifRegular), weight: 400 as const, style: 'normal' as const },
+];
 
 // resvg decodes PNG and JPEG, not WebP, so screenshots are transcoded on the way in.
 async function dataUri(file: string, width: number): Promise<string> {
@@ -50,12 +52,6 @@ const h = (type: string, props: Record<string, unknown>, ...children: unknown[])
 });
 
 export async function renderOg(spec: OgSpec): Promise<Buffer> {
-  const [inter, interBold, serif] = await Promise.all([
-    font('Inter-Regular.ttf'),
-    font('Inter-SemiBold.ttf'),
-    font('InstrumentSerif-Regular.ttf'),
-  ]);
-
   const shots = await Promise.all((spec.screenshotPaths ?? []).slice(0, 3).map((p) => dataUri(p, 300)));
   const icon = spec.iconPath ? await dataUri(spec.iconPath, 160) : null;
   const hasStrip = shots.length > 0;
@@ -163,11 +159,7 @@ export async function renderOg(spec: OgSpec): Promise<Buffer> {
   const svg = await satori(tree as never, {
     width: 1200,
     height: 630,
-    fonts: [
-      { name: 'Inter', data: inter, weight: 400, style: 'normal' },
-      { name: 'Inter', data: interBold, weight: 600, style: 'normal' },
-      { name: 'Instrument Serif', data: serif, weight: 400, style: 'normal' },
-    ],
+    fonts: FONTS,
   });
 
   return new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng();

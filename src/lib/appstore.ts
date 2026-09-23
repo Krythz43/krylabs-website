@@ -31,11 +31,22 @@ export function listing(slug: string): Listing | undefined {
   return apps[slug];
 }
 
-/** Screenshot images for an app, in store order. Empty for apps that are not listed. */
+/**
+ * Screenshot images for an app, in store order. Empty for apps that are not listed.
+ * A file the snapshot names but the repo lacks is a broken sync, so it fails the build
+ * rather than quietly shipping fewer screenshots.
+ */
 export function screens(slug: string): ImageMetadata[] {
   const l = listing(slug);
   if (!l) return [];
-  return l.screenshots
-    .map((f) => files[`/src/assets/appstore/${slug}/${f}`])
-    .filter((img): img is ImageMetadata => Boolean(img));
+  return l.screenshots.map((f) => {
+    const img = files[`/src/assets/appstore/${slug}/${f}`];
+    if (!img) {
+      throw new Error(
+        `appstore.json lists ${slug}/${f} but src/assets/appstore/${slug}/${f} is missing. ` +
+          'Run `npm run sync` and commit both the JSON and the screenshot directory.',
+      );
+    }
+    return img;
+  });
 }

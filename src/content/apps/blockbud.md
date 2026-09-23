@@ -11,6 +11,7 @@ hero:
   lead: A block screen only works if it means something to you. BlockBud lets you put your own photos, colours and words on the screen that stops you, so the reminder is personal instead of generic.
 sections:
   - heading: What's inside
+    id: inside
     items:
       - t: A focus screen that is yours
         d: Choose the colours, add your own pictures, write the line that actually gets through to you. Make it motivating, or funny, or both.
@@ -23,6 +24,7 @@ sections:
       - t: Built on Apple's Screen Time
         d: Uses the system Screen Time framework, so blocking is reliable and feels native, because it is.
   - heading: Getting started
+    id: getting-started
     numbered: true
     items:
       - t: Allow Screen Time access

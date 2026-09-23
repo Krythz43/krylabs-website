@@ -29,6 +29,7 @@ const sizes = variant === 'row' ? '200px' : '(max-width: 760px) 200px, 240px';
       <Image
         src={s.img}
         alt={s.alt}
+        width={widths[widths.length - 1]}
         widths={widths}
         sizes={sizes}
         loading={i < eager ? 'eager' : 'lazy'}

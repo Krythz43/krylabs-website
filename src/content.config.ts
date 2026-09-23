@@ -23,6 +23,8 @@ const apps = defineCollection({
       sections: z.array(
         z.object({
           heading: z.string(),
+          /** Anchor id; defaults to the slugified heading. Set it when something links here. */
+          id: z.string().optional(),
           numbered: z.boolean().default(false),
           items: z.array(z.object({ t: z.string(), d: z.string() })),
         }),

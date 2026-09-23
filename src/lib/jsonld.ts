@@ -3,6 +3,7 @@
 import type { CollectionEntry } from 'astro:content';
 import { site, absolute, isoDate } from './site';
 import type { Listing } from './appstore';
+import { primaryLink } from './apps';
 
 const ORG_ID = `${site.url}/#organization`;
 const PERSON_ID = `${site.url}/#founder`;
@@ -81,6 +82,7 @@ export function website() {
 export function softwareApplication(app: CollectionEntry<'apps'>, store: Listing | undefined, screenshotUrls: string[]) {
   const d = app.data;
   const genre = store?.genres?.find((g) => CATEGORY[g]);
+  const primary = primaryLink(app, store);
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -98,7 +100,8 @@ export function softwareApplication(app: CollectionEntry<'apps'>, store: Listing
           softwareVersion: store.version,
           dateModified: store.updated,
           datePublished: store.released,
-          downloadUrl: store.storeUrl,
+          // The same place the page's button goes: the store splitter for cross-platform apps.
+          downloadUrl: absolute(primary?.href ?? store.storeUrl),
           offers: { '@type': 'Offer', price: store.price, priceCurrency: store.currency },
         }
       : {}),

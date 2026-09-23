@@ -4,7 +4,8 @@ import { site } from '../lib/site';
 
 interface Props {
   title: string;
-  updated?: string;
+  /** When the text was last changed. Required so it can never fall back to a stale default. */
+  updated: string;
   description?: string;
   eyebrow?: string;
   backHref?: string;
@@ -13,7 +14,7 @@ interface Props {
 
 const {
   title,
-  updated = 'June 2026',
+  updated,
   description,
   eyebrow = `${site.name} legal`,
   backHref = '/',

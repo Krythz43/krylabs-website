@@ -14,7 +14,7 @@ const { wide = false } = Astro.props;
 
 <div class={`founder${wide ? ' founder--wide' : ''}`}>
   <div class="founder__photo">
-    <Image src={photo} alt={`${site.founder.name}, founder of ${site.name}`} widths={[260, 520]} sizes="(max-width: 760px) 200px, 260px" loading="lazy" />
+    <Image src={photo} alt={`${site.founder.name}, founder of ${site.name}`} width={520} widths={[260, 520]} sizes="(max-width: 760px) 200px, 260px" loading="lazy" />
   </div>
   <div class="founder__body">
     <p class="founder__name">{site.founder.name}</p>

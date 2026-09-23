@@ -9,9 +9,12 @@ import { screens } from '../../lib/appstore';
 import { site } from '../../lib/site';
 
 export async function getStaticPaths() {
-  const apps = await getCollection('apps');
+  const apps = (await getCollection('apps')).sort((a, b) => a.data.order - b.data.order);
   const posts = await getCollection('posts');
   const paths = (slug: string, n: number) => screens(slug).slice(0, n).map((img) => img.fsPath);
+
+  // The same apps the home hero leads with, one screenshot each.
+  const featured = apps.filter((a) => a.data.featured).slice(0, 3);
 
   const pages: { slug: string; spec: OgSpec }[] = [
     {
@@ -20,7 +23,7 @@ export async function getStaticPaths() {
         kicker: `${site.name}, an independent app studio in Bengaluru`,
         title: site.tagline,
         description: 'iPhone apps and web products, designed, built and shipped by one person.',
-        screenshotPaths: [...paths('reelmark', 1), ...paths('bubblenest', 1), ...paths('blockbud', 1)],
+        screenshotPaths: featured.flatMap((a) => paths(a.id, 1)),
       },
     },
     {

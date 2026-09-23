@@ -1,0 +1,27 @@
+---
+// The listing facts under an app's blurb: platforms, status, version and date, price.
+// `long` is the app page (full date, minimum OS); the default is the home row.
+import type { CollectionEntry } from 'astro:content';
+import type { Listing } from '../lib/appstore';
+import { longDate, monthYear } from '../lib/site';
+
+interface Props {
+  app: CollectionEntry<'apps'>;
+  store?: Listing;
+  long?: boolean;
+}
+
+const { app, store, long = false } = Astro.props;
+const d = app.data;
+const coming = d.status === 'in-development';
+// The listing's minimum OS is the iOS floor; Android has no equivalent in the lookup data.
+const requires = long && store && d.platforms.includes('iPhone') ? `Requires iOS ${store.minimumOs} or later` : null;
+---
+
+<p class={`facts${long ? ' facts--page' : ''}`}>
+  <span>{d.platforms.join(', ')}</span>
+  {coming && <span>In development</span>}
+  {store && <span>Version {store.version}, updated {long ? longDate(store.updated) : monthYear(store.updated)}</span>}
+  {requires && <span>{requires}</span>}
+  {store && <span>{store.formattedPrice}</span>}
+</p>
