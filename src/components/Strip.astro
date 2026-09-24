@@ -3,6 +3,9 @@
 //   hero  - the home page strip, bleeds right and scrolls sideways
 //   page  - the same on an app page
 //   row   - two shots beside an app row, no scrolling
+// Store screenshots come in more than one shape (CocoTree's are 9:16, the rest are the 6.7"
+// iPhone size). The scrolling strips give every card the same height and each card takes its
+// width from its own ratio; both numbers are emitted here as custom properties for global.css.
 import { Image } from 'astro:assets';
 import type { Shot } from '../lib/apps';
 
@@ -14,19 +17,34 @@ interface Props {
 }
 
 const { shots, variant = 'page', eager = 0 } = Astro.props;
-const widths = variant === 'row' ? [200, 400] : [240, 480];
-const sizes = variant === 'row' ? '200px' : '(max-width: 760px) 200px, 240px';
+
+// Card heights on phones (the 760px breakpoint in global.css) and above, for the scrolling
+// strips. The row is sized by width instead (--shot-w in global.css) so it can shrink into
+// its column; its aspect ratio still comes from --r.
+const heights = { hero: { phone: 364, desktop: 485 }, page: { phone: 433, desktop: 520 } };
+const height = variant === 'row' ? null : heights[variant];
+const ratio = (s: Shot) => s.img.width / s.img.height;
+
+// The synced screenshots are 640px wide. 640 keeps a 9:16 card (up to 292px) sharp at 2x;
+// 480 stays because src/pages/[app].astro reuses that size for the JSON-LD screenshot URLs.
+const widths = variant === 'row' ? [200, 400] : [240, 480, 640];
+// The card's rendered width, so the browser picks the right srcset candidate.
+const sizesFor = (s: Shot) =>
+  height
+    ? `(max-width: 760px) ${Math.round(height.phone * ratio(s))}px, ${Math.round(height.desktop * ratio(s))}px`
+    : '(max-width: 900px) 180px, 200px';
+const stripStyle = height ? `--shot-h:${height.desktop}px; --shot-h-phone:${height.phone}px` : undefined;
 ---
 
-<div class={`strip strip--${variant}`}>
+<div class={`strip strip--${variant}`} style={stripStyle}>
   {shots.map((s, i) => (
-    <figure class="strip__shot" style={`--i:${i}`}>
+    <figure class="strip__shot" style={`--i:${i}; --r:${ratio(s).toFixed(4)}`}>
       <Image
         src={s.img}
         alt={s.alt}
         width={widths[widths.length - 1]}
         widths={widths}
-        sizes={sizes}
+        sizes={sizesFor(s)}
         loading={i < eager ? 'eager' : 'lazy'}
         fetchpriority={i < eager ? 'high' : 'auto'}
         decoding="async"
