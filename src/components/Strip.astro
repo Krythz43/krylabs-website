@@ -3,6 +3,9 @@
 //   hero  - the home page strip, bleeds right and scrolls sideways
 //   page  - the same on an app page
 //   row   - two shots beside an app row, no scrolling
+// Store screenshots come in more than one shape (CocoTree's are 9:16, the rest are the 6.7"
+// iPhone size), so the scrolling strips give every card the same height and each card takes
+// its width from its own ratio, which global.css reads from --r.
 import { Image } from 'astro:assets';
 import type { Shot } from '../lib/apps';
 
@@ -15,18 +18,24 @@ interface Props {
 
 const { shots, variant = 'page', eager = 0 } = Astro.props;
 const widths = variant === 'row' ? [200, 400] : [240, 480];
-const sizes = variant === 'row' ? '200px' : '(max-width: 760px) 200px, 240px';
+
+// Card heights [phone, desktop]; must match --shot-h for each variant in global.css.
+const heights = variant === 'hero' ? [364, 485] : [433, 520];
+const ratio = (s: Shot) => s.img.width / s.img.height;
+// The rendered width of a card, so the browser picks the right srcset candidate.
+const sizesFor = (s: Shot) =>
+  variant === 'row' ? '200px' : `(max-width: 760px) ${Math.round(heights[0] * ratio(s))}px, ${Math.round(heights[1] * ratio(s))}px`;
 ---
 
 <div class={`strip strip--${variant}`}>
   {shots.map((s, i) => (
-    <figure class="strip__shot" style={`--i:${i}`}>
+    <figure class="strip__shot" style={`--i:${i}; --r:${ratio(s).toFixed(4)}`}>
       <Image
         src={s.img}
         alt={s.alt}
         width={widths[widths.length - 1]}
         widths={widths}
-        sizes={sizes}
+        sizes={sizesFor(s)}
         loading={i < eager ? 'eager' : 'lazy'}
         fetchpriority={i < eager ? 'high' : 'auto'}
         decoding="async"

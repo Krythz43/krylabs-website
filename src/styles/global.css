@@ -175,8 +175,9 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 /* A row of real screenshots. Bleeds to the right edge on wide screens and scrolls
    sideways on narrow ones; the images stay at their native aspect ratio. */
 .strip {
-  --shot-w: 200px;
+  --shot-h: 485px;
   display: flex;
+  align-items: flex-start;
   gap: 18px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -186,10 +187,14 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   scrollbar-width: none;
 }
 .strip::-webkit-scrollbar { display: none; }
-.strip--hero { --shot-w: 224px; }
-.strip--page { --shot-w: 240px; padding-top: 40px; }
+.strip--page { --shot-h: 520px; padding-top: 40px; }
+/* Cards share a height and take their width from their own screenshot's aspect ratio (--r,
+   set per card by Strip.astro), so a 9:16 shot and a 6.7" iPhone shot sit in one row with
+   their tops and bottoms aligned and no empty card under the shorter one. */
 .strip__shot {
-  flex: 0 0 var(--shot-w);
+  flex: 0 0 auto;
+  height: var(--shot-h);
+  aspect-ratio: var(--r, 0.462);
   scroll-snap-align: start;
   border-radius: var(--phone-radius);
   border: 1px solid var(--line-strong);
@@ -197,7 +202,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   overflow: hidden;
   box-shadow: 0 30px 60px -36px rgba(23, 22, 15, 0.45);
 }
-.strip__shot img { width: 100%; height: auto; }
+.strip__shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* The one entrance animation on the site: the hero strip rises into place on load. */
 @media (prefers-reduced-motion: no-preference) {
@@ -216,7 +221,8 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   .strip--hero, .strip--page { margin-right: calc(-1 * (100vw - var(--container)) / 2 - var(--gutter)); padding-right: 40px; }
 }
 
-/* Beside an app row: two shots, no scrolling, no bleed. */
+/* Beside an app row: two shots from the same app, no scrolling, no bleed. These are sized by
+   width so they can shrink to fit the column; the aspect ratio still sets the height. */
 .strip--row {
   --shot-w: 200px;
   overflow: visible;
@@ -226,7 +232,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   gap: 14px;
   justify-content: flex-end;
 }
-.strip--row .strip__shot { flex: 0 1 var(--shot-w); box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
+.strip--row .strip__shot { flex: 0 1 var(--shot-w); height: auto; box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
 
 /* ----------------------------- App rows (home) ----------------------------- */
 .rows { border-top: 1px solid var(--line); }
@@ -384,8 +390,8 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   .section__head { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 28px; }
   .section__head + .lead { margin-top: -12px; margin-bottom: 28px; }
   .hero { padding-top: 40px; }
-  .strip { --shot-w: 168px; gap: 12px; padding-top: 40px; }
-  .strip--page { --shot-w: 200px; }
+  .strip { --shot-h: 364px; gap: 12px; padding-top: 40px; }
+  .strip--page { --shot-h: 433px; }
   .tiles { grid-template-columns: 1fr; gap: 32px; }
   .founder, .founder--wide { grid-template-columns: 1fr; gap: 22px; }
   .founder__photo { max-width: 200px; }
