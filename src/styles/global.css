@@ -175,9 +175,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
 /* A row of real screenshots. Bleeds to the right edge on wide screens and scrolls
    sideways on narrow ones; the images stay at their native aspect ratio. */
 .strip {
-  --shot-h: 485px;
   display: flex;
-  align-items: flex-start;
   gap: 18px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -187,14 +185,15 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   scrollbar-width: none;
 }
 .strip::-webkit-scrollbar { display: none; }
-.strip--page { --shot-h: 520px; padding-top: 40px; }
-/* Cards share a height and take their width from their own screenshot's aspect ratio (--r,
-   set per card by Strip.astro), so a 9:16 shot and a 6.7" iPhone shot sit in one row with
-   their tops and bottoms aligned and no empty card under the shorter one. */
+.strip--page { padding-top: 40px; }
+/* Strip.astro sets the strip's card height (--shot-h, --shot-h-phone) and each card's aspect
+   ratio (--r). Cards in the scrolling strips share the height and take their width from their
+   own ratio, so a 9:16 shot and a 6.7" iPhone shot sit in one row with their tops and bottoms
+   aligned and no empty card under the shorter one. */
 .strip__shot {
   flex: 0 0 auto;
   height: var(--shot-h);
-  aspect-ratio: var(--r, 0.462);
+  width: calc(var(--shot-h) * var(--r));
   scroll-snap-align: start;
   border-radius: var(--phone-radius);
   border: 1px solid var(--line-strong);
@@ -232,7 +231,7 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   gap: 14px;
   justify-content: flex-end;
 }
-.strip--row .strip__shot { flex: 0 1 var(--shot-w); height: auto; box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
+.strip--row .strip__shot { flex: 0 1 var(--shot-w); width: auto; height: auto; aspect-ratio: var(--r); box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
 
 /* ----------------------------- App rows (home) ----------------------------- */
 .rows { border-top: 1px solid var(--line); }
@@ -390,8 +389,8 @@ h3.display { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
   .section__head { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 28px; }
   .section__head + .lead { margin-top: -12px; margin-bottom: 28px; }
   .hero { padding-top: 40px; }
-  .strip { --shot-h: 364px; gap: 12px; padding-top: 40px; }
-  .strip--page { --shot-h: 433px; }
+  .strip { gap: 12px; padding-top: 40px; }
+  .strip__shot { height: var(--shot-h-phone); width: calc(var(--shot-h-phone) * var(--r)); }
   .tiles { grid-template-columns: 1fr; gap: 32px; }
   .founder, .founder--wide { grid-template-columns: 1fr; gap: 22px; }
   .founder__photo { max-width: 200px; }
