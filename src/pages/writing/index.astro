@@ -1,27 +1,41 @@
 ---
 import Base from '../../layouts/Base.astro';
-import PostItem from '../../components/PostItem.astro';
 import { getPosts } from '../../lib/apps';
-import { site } from '../../lib/site';
+import { site, isoDate, longDate, dayMonth } from '../../lib/site';
 
 const posts = await getPosts();
 const description = `Build notes from ${site.name}: what shipped, what broke, and what it took to fix.`;
+
+// Newest first, grouped by year; the year is printed on the first row of each group only.
+const years = new Map<string, typeof posts>();
+for (const post of posts) {
+  const year = isoDate(post.data.date).slice(0, 4);
+  years.set(year, [...(years.get(year) ?? []), post]);
+}
+
+// The page is as fresh as its most recently written or revised post.
+const updated = posts.map((p) => isoDate(p.data.updated ?? p.data.date)).sort().at(-1);
 ---
 
 <Base title={`Writing | ${site.name}`} description={description} ogImage="/og/writing.png">
-  <section class="page">
-    <div class="container">
-      <p class="kicker hero__kicker">Writing</p>
-      <h1 class="display">Build notes.</h1>
-      <p class="lead page__lead">What shipped, what broke, and what it took to fix. Written as it happened.</p>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="posts">
-        {posts.map((p) => <PostItem post={p} level="h2" />)}
-      </div>
-    </div>
-  </section>
+  <div class="notes notes-in">
+    <header class="notes__head">
+      <h1 class="notes__title">Writing</h1>
+      {updated && <p class="notes__meta">Updated <time datetime={updated}>{longDate(updated)}</time></p>}
+    </header>
+    <p class="notes__intro">
+      Build notes from {site.name}: what shipped, what broke, and what it took to fix. Written as it happened.
+    </p>
+    <ol class="notes-index">
+      {[...years].map(([year, group]) =>
+        group.map((post, i) => (
+          <li class="notes-index__row" data-first={i === 0 ? '' : undefined}>
+            <span class="notes-index__year">{i === 0 ? year : ''}</span>
+            <a class="notes-index__title" href={`/writing/${post.id}/`}>{post.data.title}</a>
+            <time class="notes-index__date" datetime={isoDate(post.data.date)}>{dayMonth(post.data.date)}</time>
+          </li>
+        )),
+      )}
+    </ol>
+  </div>
 </Base>

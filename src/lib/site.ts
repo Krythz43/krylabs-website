@@ -2,10 +2,10 @@
 export const site = {
   name: 'Krylabs',
   url: 'https://krylabs.com',
-  tagline: 'Small apps that do one thing well.',
+  tagline: 'Your iPhone app, from idea to App Store.',
   // Deliberately does not list the apps: the collections change, this string would not.
   description:
-    'Krylabs is a one-person app studio in Bengaluru. Krithick Santhosh designs, builds and ships iPhone apps and web products, end to end.',
+    'Krylabs is an iOS app studio in Bengaluru. Work directly with Krithick Santhosh, an iOS engineer from Blinkit and PhonePe, to design, build and ship a native iPhone app.',
   email: 'info.krylabs@gmail.com',
   phone: '+91-8597165755',
   founder: {
@@ -32,11 +32,19 @@ export const site = {
 
 const list = new Intl.ListFormat('en', { type: 'conjunction' });
 
-/** "Previously at PhonePe and Blinkit. IIT Kharagpur." */
-export const credentials = `Previously at ${list.format(site.founder.previously.map((p) => p.name))}. ${site.founder.education}.`;
+/** "Previously iOS at PhonePe and Blinkit. IIT Kharagpur." */
+export const credentials = `Previously iOS at ${list.format(site.founder.previously.map((p) => p.name))}. ${site.founder.education}.`;
 
 /** "payments at PhonePe and quick commerce at Blinkit", for prose. */
 export const workHistory = list.format(site.founder.previously.map((p) => `${p.on} at ${p.name}`));
+
+/** WhatsApp chat link for the studio number, with an opening line already typed. */
+export function whatsapp(text = "Hi Krithick, I'd like to talk about an iOS app."): string {
+  return `https://wa.me/${site.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+}
+
+/** "+91 85971 65755", the studio number as people read it. */
+export const phoneDisplay = site.phone.replace(/^\+91-?(\d{5})(\d{5})$/, '+91 $1 $2');
 
 export const socials = [
   { label: 'LinkedIn', href: site.founder.linkedin },
@@ -63,6 +71,12 @@ function fmt(d: Date | string, opts: Intl.DateTimeFormatOptions): string {
 /** "2026-08-10" → "August 2026". Month granularity is all a listing date needs. */
 export function monthYear(d: Date | string): string {
   return fmt(d, { month: 'long', year: 'numeric' });
+}
+
+/** "2026-08-10" → "10/08", for lists already grouped by year. */
+export function dayMonth(d: Date | string): string {
+  const [, m, day] = isoDate(d).split('-');
+  return `${day}/${m}`;
 }
 
 /** "2026-08-10" → "10 August 2026". */

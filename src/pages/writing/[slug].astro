@@ -16,8 +16,11 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 const published = isoDate(post.data.date);
+const updated = post.data.updated ? isoDate(post.data.updated) : undefined;
+// The contents list in the margin: the post's sections, worth showing from two up.
+const sections = headings.filter((h) => h.depth === 2);
 ---
 
 <Base
@@ -28,16 +31,47 @@ const published = isoDate(post.data.date);
   published={published}
   jsonLd={[blogPosting(post), person(await portraitUrl()), organization()]}
 >
-  <article class="page page--end article">
-    <div class="container">
-      <p class="kicker hero__kicker"><a class="link link--quiet" href="/writing/">Build notes</a></p>
-      <h1 class="display">{post.data.title}</h1>
-      <p class="article__meta">
-        {site.founder.name}, <time datetime={published}>{longDate(published)}</time>
-      </p>
-      <div class="prose">
+  <div class="notes notes--post">
+    <aside class="notes__side">
+      <div class="notes__side-inner">
+        <a class="notes__back" href="/writing/"><span aria-hidden="true">←</span> Index</a>
+        {sections.length > 1 && (
+          <nav class="notes__toc" aria-label="On this page">
+            <ul>
+              {sections.map((h) => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}
+            </ul>
+          </nav>
+        )}
+      </div>
+    </aside>
+    <article class="notes__main">
+      <header class="notes__head notes-in">
+        <h1 class="notes__title">{post.data.title}</h1>
+        <p class="notes__meta">
+          {site.founder.name}, <time datetime={published}>{longDate(published)}</time>
+          {updated && <>. Updated <time datetime={updated}>{longDate(updated)}</time></>}
+        </p>
+      </header>
+      <div class="notes__body notes-in">
         <Content />
       </div>
-    </div>
-  </article>
+    </article>
+  </div>
+  {sections.length > 1 && (
+    <script is:inline>
+      // Marks the section being read in the margin's contents list: the last heading
+      // above the top third of the window.
+      (function () {
+        var links = [].slice.call(document.querySelectorAll('.notes__toc a'));
+        var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.hash.slice(1))); });
+        var update = function () {
+          var cur = -1;
+          heads.forEach(function (h, i) { if (h && h.getBoundingClientRect().top < innerHeight * 0.3) cur = i; });
+          links.forEach(function (a, i) { if (i === cur) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+        };
+        addEventListener('scroll', function () { requestAnimationFrame(update); }, { passive: true });
+        update();
+      })();
+    </script>
+  )}
 </Base>

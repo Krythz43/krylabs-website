@@ -3,28 +3,31 @@ import Base from '../layouts/Base.astro';
 import Founder from '../components/Founder.astro';
 import Defs from '../components/Defs.astro';
 import Socials from '../components/Socials.astro';
+import ProductTile from '../components/ProductTile.astro';
+import { getCollection } from 'astro:content';
 import { site, workHistory } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
 import { person, organization } from '../lib/jsonld';
 
 const principles = [
-  { t: 'Built end to end', d: 'Every product is designed, developed and shipped by one person, from the first sketch to the store listing. Nothing is handed off.' },
+  { t: 'Built end to end', d: 'Design, engineering and the App Store listing come from one place, from the first sketch onwards. Nothing gets lost in a handoff.' },
+  { t: 'Built to be handed over', d: 'Standard Swift and SwiftUI, in a repository the client owns from the first day, so an app never depends on one developer staying around.' },
   { t: 'Small and sharp', d: 'Each app does one thing and does it well. Scope is the main design tool.' },
-  { t: 'Solve a real itch', d: 'ReelMark exists because saved reels vanish. BlockBud exists because generic block screens do not work. The apps start from a problem the founder actually had.' },
   { t: 'Private by default', d: 'BlockBud and One keep everything on the device. BubbleNest stores no location and no email. Collecting less is a feature.' },
 ];
 
-const description = `${site.name} is an independent app and product studio founded by ${site.founder.name} in Bengaluru, India.`;
+const description = `${site.name} is an iOS app studio founded by ${site.founder.name} in Bengaluru, India.`;
+const products = (await getCollection('products')).sort((a, b) => a.data.order - b.data.order);
 ---
 
 <Base title={`About ${site.name}`} description={description} ogImage="/og/about.png" jsonLd={[person(await portraitUrl()), organization()]}>
   <section class="page">
     <div class="container">
       <p class="kicker hero__kicker">About</p>
-      <h1 class="display">An independent studio that ships.</h1>
+      <h1 class="display">An iOS studio that ships.</h1>
       <p class="lead page__lead">
-        {site.name} is a one-person studio in Bengaluru. It builds iPhone apps and web products end to end,
-        and publishes them under its own name.
+        {site.name} is an iOS app studio in Bengaluru. It designs and builds native iPhone apps for clients, and
+        publishes its own on the App Store.
       </p>
     </div>
   </section>
@@ -33,13 +36,13 @@ const description = `${site.name} is an independent app and product studio found
     <div class="container">
       <Founder wide>
         <p>
-          Krithick is an iOS engineer. He studied at {site.founder.education}, then worked on {workHistory} before
-          starting {site.name} to build his own products.
+          Krithick is an iOS engineer. He studied at {site.founder.education}, then worked as an iOS engineer on {workHistory}
+          before starting {site.name}.
         </p>
         <p>
           The studio is where that experience turns into apps: ReelMark, BubbleNest, BlockBud and CocoTree on the
-          App Store, and GymWhiteBoard, LeadOven, Galentini and Comet on the web. He designs, builds, tests and
-          publishes each one himself, and answers the support email.
+          App Store, each designed, built, tested and published by him. Clients work with him directly, with no
+          account managers in between.
         </p>
         <div class="founder__socials"><Socials /></div>
       </Founder>
@@ -52,6 +55,18 @@ const description = `${site.name} is an independent app and product studio found
         <h2 class="display">How the studio works</h2>
       </div>
       <Defs items={principles} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Also from the studio</h2>
+        <p class="kicker">Web products with their own sites.</p>
+      </div>
+      <div class="tiles">
+        {products.map((p) => <ProductTile product={p} />)}
+      </div>
     </div>
   </section>
 </Base>

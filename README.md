@@ -1,7 +1,8 @@
 # krylabs-website
 
 The Krylabs studio site, [krylabs.com](https://krylabs.com). Astro 5, compiled to static HTML,
-served by Caddy on the droplet. No client-side framework and one ten-line inline script.
+served by Caddy on the droplet. No client-side framework; one ten-line inline script on every page,
+plus a short one on build notes that highlights the current section in the margin.
 
 Split out of `MatchMyVibe-Backend` on 2026-08-02. History before that date lives in that repo.
 
@@ -47,7 +48,7 @@ to build, and a `NODE_ENV=production` install must not skip any.
 src/
 ├── content/
 │   ├── apps/*.md          # one file per app = one page at /<slug> + one row on the home page
-│   ├── products/*.md      # web products: a tile on the home page, links out
+│   ├── products/*.md      # web products: a tile on /about, links out
 │   └── posts/*.md         # build notes at /writing/<slug>
 ├── content.config.ts      # the schemas for the three collections
 ├── assets/
@@ -120,14 +121,16 @@ URLs are byte-identical to before:
 
 - **Palette:** warm paper (`--bg`), one accent (terracotta), hairlines for structure. Tokens at
   `:root` in `src/styles/global.css`.
-- **Type:** Instrument Serif for display headings, Inter for everything else. Both self-hosted
+- **Type:** Instrument Serif for display headings, Inter for everything else. The writing pages
+  (`/writing/`, build notes) use a quieter register: one 560px column of 15px Inter, emphasis by
+  weight, no display type. Both self-hosted
   from `@fontsource` (latin subsets only); the two first-paint faces are preloaded. The OG
   renderer and the logo script use the same package's WOFF files, so there is one copy of each
   face in the repo.
 - **Imagery:** real App Store screenshots are the only decoration. The hero strip is one
   screenshot from each featured app, then a second from each.
-- **Motion:** one entrance animation (the hero strip rises on load) and cross-document view
-  transitions in CSS. Nothing on scroll, nothing on hover beyond a border. `prefers-reduced-motion`
+- **Motion:** two entrance animations (the hero strip rises on load; the writing pages' text
+  arrives a line at a time) and cross-document view transitions in CSS. Nothing on scroll, nothing on hover beyond a border. `prefers-reduced-motion`
   turns the entrance off.
 
 ## Note on this being a public repo

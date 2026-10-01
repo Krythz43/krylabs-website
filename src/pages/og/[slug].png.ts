@@ -19,9 +19,9 @@ export async function getStaticPaths() {
     {
       slug: 'home',
       spec: {
-        kicker: `${site.name}, an independent app studio in Bengaluru`,
+        kicker: `${site.name}, an iOS app studio in Bengaluru`,
         title: site.tagline,
-        description: 'iPhone apps and web products, designed, built and shipped by one person.',
+        description: 'Native iPhone apps, designed, built and shipped end to end.',
         screenshots: featured.flatMap((a) => screenBytes(a.id, 1)),
       },
     },
@@ -29,7 +29,7 @@ export async function getStaticPaths() {
       slug: 'about',
       spec: {
         kicker: `About ${site.name}`,
-        title: 'An independent studio that ships.',
+        title: 'An iOS studio that ships.',
         description: `Founded by ${site.founder.name}. ${credentials}`,
       },
     },

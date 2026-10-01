@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import rehypeFigures from './src/lib/rehype-figures.mjs';
 
 // Static HTML in ./dist, served by Caddy on the droplet (see Caddyfile) or server.js.
 export default defineConfig({
@@ -11,6 +12,7 @@ export default defineConfig({
       filter: (page) => !page.includes('/bubblenest/download') && !page.includes('/og/'),
     }),
   ],
+  markdown: { rehypePlugins: [rehypeFigures] },
   // Dev-only toolbar pill clutters screenshots and is never in the static build.
   devToolbar: { enabled: false },
   build: {
