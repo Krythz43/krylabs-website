@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { site, absolute } from '../lib/site';
+import { site, absolute, addressLine } from '../lib/site';
 import { HOME_IDS, PAGE_IDS } from '../lib/apps';
 // Preload the two faces the first paint needs. The hashed URLs come from the same
 // package the stylesheet imports, so they can never drift apart.
@@ -115,8 +115,8 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
             {footerLinks.map((l) => <a href={l.href}>{l.label}</a>)}
           </nav>
           <p class="footer__meta">
-            &copy; 2026 <strong>{site.name}</strong>. Owned and operated by {site.founder.name}.<br />
-            {site.address.street}, {site.address.city}, {site.address.region} {site.address.postalCode}, India
+            &copy; 2026 <strong>{site.legalName}</strong>. Owned and operated by {site.founder.name}.<br />
+            {addressLine}
           </p>
         </div>
         <a class="link link--quiet" href={`mailto:${site.email}`} data-e="footer-email">{site.email}</a>
