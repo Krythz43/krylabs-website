@@ -6,6 +6,7 @@ icon: ../../assets/icons/blockbud.jpg
 storeId: 6753329479
 platforms: [iPhone]
 order: 3
+built: Apple's Screen Time APIs, with every block list, photo and statistic stored on the device.
 featured: true
 hero:
   title: Your screen time, your rules.

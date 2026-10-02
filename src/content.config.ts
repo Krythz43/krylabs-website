@@ -20,6 +20,8 @@ const apps = defineCollection({
       status: z.enum(['live', 'in-development']).default('live'),
       order: z.number(),
       featured: z.boolean().default(false),
+      /** What the app is made of, for someone hiring the studio: shown on its home page row. */
+      built: z.string().optional(),
       // Where the primary button goes. Cross-platform apps point at their own store
       // splitter; single-store apps use the listing URL from appstore.json.
       download: z.object({ label: z.string(), href: z.string() }).optional(),

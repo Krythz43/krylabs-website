@@ -11,9 +11,11 @@ export type Post = CollectionEntry<'posts'>;
 /** Ids of the home page's sections, used for its `id` attributes and the nav's anchors. */
 export const HOME_IDS = {
   track: 'track-record',
+  offers: 'offers',
   promises: 'promises',
   services: 'services',
   apps: 'apps',
+  testimonials: 'testimonials',
   process: 'process',
   stack: 'stack',
   founder: 'founder',

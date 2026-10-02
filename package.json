@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "start": "node server.js",
-    "sync": "node scripts/sync-appstore.mjs"
+    "sync": "node scripts/sync-appstore.mjs",
+    "traffic": "node scripts/traffic.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",

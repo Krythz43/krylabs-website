@@ -55,7 +55,7 @@ const jsonLd = [softwareApplication(app, store, screenshotUrls), organization(),
       <p class="lead page__lead">{d.hero.lead}</p>
       <div class="page__actions" id={PAGE_IDS.download}>
         {primary && (
-          <a href={primary.href} class="btn" {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
+          <a href={primary.href} class="btn" data-e={`store-${app.id}`} {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>{primary.label}</a>
         )}
         {insideLabel && <a href={`#${ids[0]}`} class="btn btn--ghost">{insideLabel}</a>}
       </div>

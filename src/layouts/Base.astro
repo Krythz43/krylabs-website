@@ -119,12 +119,12 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
             {site.address.street}, {site.address.city}, {site.address.region} {site.address.postalCode}, India
           </p>
         </div>
-        <a class="link link--quiet" href={`mailto:${site.email}`}>{site.email}</a>
+        <a class="link link--quiet" href={`mailto:${site.email}`} data-e="footer-email">{site.email}</a>
       </div>
     </footer>
 
     <script is:inline>
-      // The only script on the site: a hairline under the nav once the page has scrolled.
+      // The script every page carries. A hairline under the nav once the page has scrolled.
       (function () {
         var nav = document.getElementById('nav');
         if (!nav) return;
@@ -132,6 +132,19 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
         window.addEventListener('scroll', on, { passive: true });
         on();
       })();
+      // And a count of clicks on the links that matter (contact, store buttons): pressing a
+      // link with data-e="name" requests /e.gif?n=name, a one-pixel file in public/. The
+      // request's line in the server's access log is the record, read by `npm run traffic`.
+      // No cookie and nothing third-party; `keepalive` lets it finish if the page is left.
+      window.countClick = function (name) {
+        try {
+          fetch('/e.gif?n=' + encodeURIComponent(name), { keepalive: true, cache: 'no-store' }).catch(function () {});
+        } catch (e) {}
+      };
+      document.addEventListener('click', function (ev) {
+        var el = ev.target.closest && ev.target.closest('[data-e]');
+        if (el) window.countClick(el.getAttribute('data-e'));
+      });
     </script>
   </body>
 </html>
