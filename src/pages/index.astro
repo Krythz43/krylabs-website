@@ -38,6 +38,32 @@ const track = [
   { t: `${site.name}`, d: `${cap(num(storeCount))} apps of its own live on the App Store, each designed, built and published end to end.`, href: `#${HOME_IDS.apps}` },
 ];
 
+// Fixed-scope work: a small first project with a set length, for an app that already exists.
+// `price` is printed when it is set (e.g. 'From ₹1,50,000'); until the founder fixes a figure
+// the line says how the price is agreed instead of inventing one.
+const offers: { t: string; length: string; price?: string; d: string }[] = [
+  {
+    t: 'A Live Activity for your app',
+    length: 'About three weeks',
+    d: "For an app already on the App Store. The lock screen and Dynamic Island design, the SwiftUI views, the push updates worked out with your backend team, and the release. It is the work Krithick did on Blinkit's order tracking, done for your app.",
+  },
+  {
+    t: 'An iOS UX audit',
+    length: 'One week',
+    d: 'For an app that works but does not feel right. A written report of what to fix, in order of impact, each point with a screenshot and the change that fixes it. The report is yours to keep, whoever does the work.',
+  },
+];
+const offerItems = offers.map((o) => ({
+  t: o.t,
+  meta: `${o.length}. ${o.price ?? 'Fixed price, agreed before work starts'}.`,
+  d: o.d,
+}));
+
+// What people who have worked with the founder say, in their words. Each entry needs their
+// permission and their real name; `href` is their LinkedIn or site. The section appears on
+// the page once there is at least one entry.
+const testimonials: { quote: string; name: string; role: string; href?: string }[] = [];
+
 // What a client can hold the studio to. Each line is a commitment the founder has agreed to.
 const promises = [
   { t: 'You own everything', d: 'The code, the design files and the App Store listing are yours from day one. The repository lives in your account, so you are never locked in.' },
@@ -48,6 +74,7 @@ const promises = [
 ];
 
 const services = [
+  { t: 'Live Activities, Dynamic Island and widgets', d: 'The lock screen and Dynamic Island for an app you already have, updated by push from your server, and home screen widgets beside them.' },
   { t: 'iPhone apps, end to end', d: 'From the first sketch to the App Store: product thinking, interface design, Swift engineering and launch.' },
   { t: 'Redesigns and UX audits', d: 'For iOS apps that work but do not feel right. A clear list of what to fix, then the fixes.' },
   { t: 'Design systems', d: 'Components, type and colour for your iOS interface, built from scratch or cleaned up, so the app stays consistent as it grows.' },
@@ -71,10 +98,11 @@ const stack = [
 
 const first = site.founder.name.split(' ')[0];
 const faq = [
-  { t: 'How much does an app cost?', d: 'It depends on scope: how many screens, whether the app needs its own backend, payments or real-time features, and how much design already exists. After a short call you get a written estimate split into milestones, so you pay as each part is delivered.' },
+  { t: 'How much does an app cost?', d: 'It depends on scope: how many screens, whether the app needs its own backend, payments or real-time features, and how much design already exists. After a short call you get a written estimate split into milestones, so you pay as each part is delivered. A Live Activity or a UX audit is a fixed price, agreed before work starts.' },
   { t: 'How long will it take?', d: 'The estimate comes with a timeline for each milestone. During the build you get a new TestFlight build every week, so progress is something you can hold, not a status report.' },
   { t: 'Who will I work with?', d: `${first}, who designs and builds the app. There is no account manager relaying messages, so questions are answered by the person who can change the code.` },
   { t: 'What if you become unavailable?', d: 'The code lives in your own repository from the first day, written in standard Swift and SwiftUI, so any iOS developer can pick it up. You are never locked in.' },
+  { t: 'Do you work with clients outside India?', d: `Yes. The work is remote by default: a call to start, then a TestFlight build on your phone and a written update every week. The studio is on ${site.timezone}, and calls are arranged to overlap with your working day.` },
   { t: 'Do you build for Android too?', d: "No. Client work is native iOS only: Swift for iPhone, with iPad and Mac when the app calls for them. (The studio's own BubbleNest has an Android version too.)" },
   { t: 'Can you take over an app that already exists?', d: 'Yes. A redesign or a UX audit is a good starting point for an iOS app that works but does not feel right yet.' },
   { t: 'What happens after launch?', d: 'Bugs found in the first 30 days are fixed free. After that the studio can stay on to ship new versions, keep the app current with each iOS release and watch its crash reports.' },
@@ -84,6 +112,26 @@ const faq = [
 const brief = [`Hi ${first},`, '', 'What the app should do:', 'Where it is now (idea, designs or an existing app):', 'When you need it:', 'Budget range (optional):', ''].join('\n');
 const projectMail = `mailto:${site.email}?subject=${encodeURIComponent('New iOS project')}&body=${encodeURIComponent(brief)}`;
 const chat = whatsapp();
+// The brief form builds its own message, so it needs the bare WhatsApp link to append to.
+const chatBase = whatsapp('');
+
+// Sections alternate between paper and the soft band. The order is listed once, with the
+// optional sections left out when they are empty, so the bands never double up.
+const order = [
+  HOME_IDS.track,
+  HOME_IDS.offers,
+  HOME_IDS.promises,
+  HOME_IDS.services,
+  HOME_IDS.process,
+  HOME_IDS.apps,
+  ...(testimonials.length > 0 ? [HOME_IDS.testimonials] : []),
+  HOME_IDS.stack,
+  HOME_IDS.founder,
+  HOME_IDS.faq,
+  ...(posts.length > 0 ? [HOME_IDS.writing] : []),
+  HOME_IDS.contact,
+];
+const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--soft' : ''}`;
 ---
 
 <Base title={`${site.name}: iOS app development studio in Bengaluru`} jsonLd={[organization(), person(await portraitUrl()), website()]}>
@@ -97,15 +145,15 @@ const chat = whatsapp();
         launch.
       </p>
       <div class="hero__actions">
-        <a href={projectMail} class="btn">Start a project</a>
-        <a href={chat} class="btn btn--ghost" target="_blank" rel="noopener">Message on WhatsApp</a>
+        <a href={`#${HOME_IDS.contact}`} class="btn" data-e="hero-start">Start a project</a>
+        <a href={chat} class="btn btn--ghost" target="_blank" rel="noopener" data-e="hero-whatsapp">Message on WhatsApp</a>
       </div>
       <p class="hero__creds">{credentials}</p>
       <Strip shots={heroShots} variant="hero" eager={4} />
     </div>
   </section>
 
-  <section class="section" id={HOME_IDS.track}>
+  <section class={band(HOME_IDS.track)} id={HOME_IDS.track}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Track record</h2>
@@ -115,7 +163,20 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section section--soft" id={HOME_IDS.promises}>
+  <section class={band(HOME_IDS.offers)} id={HOME_IDS.offers}>
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Start small</h2>
+        <p class="kicker">Two fixed-scope projects for an app you already have.</p>
+      </div>
+      <Defs items={offerItems} />
+      <p class="section__after">
+        Starting from an idea instead? <a class="link" href={`#${HOME_IDS.process}`}>See how a full build works</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class={band(HOME_IDS.promises)} id={HOME_IDS.promises}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">What you can count on</h2>
@@ -125,7 +186,7 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section" id={HOME_IDS.services}>
+  <section class={band(HOME_IDS.services)} id={HOME_IDS.services}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Services</h2>
@@ -135,7 +196,7 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section section--soft" id={HOME_IDS.process}>
+  <section class={band(HOME_IDS.process)} id={HOME_IDS.process}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">How it works</h2>
@@ -149,7 +210,7 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section" id={HOME_IDS.apps}>
+  <section class={band(HOME_IDS.apps)} id={HOME_IDS.apps}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Work</h2>
@@ -161,7 +222,28 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section section--soft" id={HOME_IDS.stack}>
+  {testimonials.length > 0 && (
+    <section class={band(HOME_IDS.testimonials)} id={HOME_IDS.testimonials}>
+      <div class="container">
+        <div class="section__head">
+          <h2 class="display">In their words</h2>
+          <p class="kicker">From people who have worked with {first}.</p>
+        </div>
+        <div class="quotes">
+          {testimonials.map((q) => (
+            <figure class="quote">
+              <blockquote>{q.quote}</blockquote>
+              <figcaption>
+                {q.href ? <a class="link" href={q.href} target="_blank" rel="noopener">{q.name}</a> : q.name}, {q.role}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class={band(HOME_IDS.stack)} id={HOME_IDS.stack}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Stack</h2>
@@ -171,7 +253,7 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section" id={HOME_IDS.founder}>
+  <section class={band(HOME_IDS.founder)} id={HOME_IDS.founder}>
     <div class="container">
       <Founder>
         <p>
@@ -184,7 +266,7 @@ const chat = whatsapp();
     </div>
   </section>
 
-  <section class="section section--soft" id={HOME_IDS.faq}>
+  <section class={band(HOME_IDS.faq)} id={HOME_IDS.faq}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Questions</h2>
@@ -194,7 +276,7 @@ const chat = whatsapp();
   </section>
 
   {posts.length > 0 && (
-    <section class="section" id={HOME_IDS.writing}>
+    <section class={band(HOME_IDS.writing)} id={HOME_IDS.writing}>
       <div class="container">
         <div class="section__head">
           <h2 class="display">Writing</h2>
@@ -207,7 +289,7 @@ const chat = whatsapp();
     </section>
   )}
 
-  <section class="section section--soft" id={HOME_IDS.contact}>
+  <section class={band(HOME_IDS.contact)} id={HOME_IDS.contact}>
     <div class="container">
       <div class="section__head">
         <h2 class="display">Start a project</h2>
@@ -215,22 +297,113 @@ const chat = whatsapp();
       </div>
       <p class="lead">
         Tell {first} what the app should do, where it is now (an idea, designs or an existing app), when you need it
-        and, if you have one, a budget range. The email button below starts with those questions.
+        and, if you have one, a budget range.
       </p>
+
+      {/* Hidden until the script below runs: without it the direct links underneath are the way in. */}
+      <form class="brief" id="brief" hidden novalidate data-first={first} data-email={site.email} data-wa={chatBase}>
+        <label class="brief__field brief__field--wide">
+          <span>What should the app do?</span>
+          <textarea name="what" rows="4" required></textarea>
+        </label>
+        <label class="brief__field">
+          <span>Where is it now?</span>
+          <select name="stage">
+            <option>An idea</option>
+            <option>Designs</option>
+            <option>An existing app</option>
+          </select>
+        </label>
+        <label class="brief__field">
+          <span>When do you need it?</span>
+          <input name="when" type="text" autocomplete="off" />
+        </label>
+        <label class="brief__field">
+          <span>Budget range, if you have one</span>
+          <input name="budget" type="text" autocomplete="off" />
+        </label>
+        <label class="brief__field">
+          <span>Your name</span>
+          <input name="name" type="text" autocomplete="name" />
+        </label>
+        <div class="brief__actions">
+          <button type="button" class="btn" data-send="whatsapp">Send on WhatsApp</button>
+          <button type="button" class="btn btn--ghost" data-send="email">Send by email</button>
+          <button type="button" class="btn btn--ghost" data-send="copy">Copy the brief</button>
+        </div>
+        <p class="brief__status small" role="status" aria-live="polite"></p>
+      </form>
+
       <div class="contact">
         <div>
           <p class="contact__label">Email</p>
-          <a class="contact__big link" href={projectMail}>{site.email}</a>
+          <a class="contact__big link" href={projectMail} data-e="contact-email">{site.email}</a>
         </div>
         <div>
           <p class="contact__label">WhatsApp or call</p>
-          <a class="contact__big link" href={chat} target="_blank" rel="noopener">{phoneDisplay}</a>
+          <a class="contact__big link" href={chat} target="_blank" rel="noopener" data-e="contact-whatsapp">{phoneDisplay}</a>
         </div>
       </div>
+      <p class="contact__note small">
+        {site.address.city}, India, on {site.timezone}. Calls are arranged to overlap with your working day.
+        {site.bookingUrl && (
+          <>
+            {' '}
+            <a class="link" href={site.bookingUrl} target="_blank" rel="noopener" data-e="contact-book">Book a call</a>.
+          </>
+        )}
+      </p>
       <div class="contact__socials">
         <p class="contact__label">{first} elsewhere</p>
         <Socials />
       </div>
     </div>
   </section>
+
+  <script is:inline>
+    // The brief form. It has no server behind it: it writes the answers into one message and
+    // hands that to WhatsApp, the visitor's mail app or the clipboard.
+    (function () {
+      var form = document.getElementById('brief');
+      if (!form) return;
+      form.hidden = false;
+      var status = form.querySelector('.brief__status');
+      var email = form.dataset.email;
+      var val = function (name) { return (form.elements[name].value || '').trim(); };
+      var message = function () {
+        var lines = ['Hi ' + form.dataset.first + ',', '', 'What the app should do: ' + val('what'), 'Where it is now: ' + val('stage')];
+        if (val('when')) lines.push('When I need it: ' + val('when'));
+        if (val('budget')) lines.push('Budget range: ' + val('budget'));
+        if (val('name')) lines.push('', val('name'));
+        return lines.join('\n');
+      };
+      form.addEventListener('submit', function (e) { e.preventDefault(); });
+      form.addEventListener('input', function () { form.elements.what.removeAttribute('aria-invalid'); });
+      form.addEventListener('click', function (e) {
+        var button = e.target.closest('[data-send]');
+        if (!button) return;
+        if (!val('what')) {
+          form.elements.what.setAttribute('aria-invalid', 'true');
+          form.elements.what.focus();
+          status.textContent = 'Add a line about what the app should do first.';
+          return;
+        }
+        var kind = button.getAttribute('data-send');
+        var body = message();
+        if (window.countClick) window.countClick('brief-' + kind);
+        if (kind === 'whatsapp') {
+          window.open(form.dataset.wa + encodeURIComponent(body), '_blank', 'noopener');
+          status.textContent = 'WhatsApp is opening with your brief typed in. Press send there.';
+        } else if (kind === 'email') {
+          location.href = 'mailto:' + email + '?subject=' + encodeURIComponent('New iOS project') + '&body=' + encodeURIComponent(body);
+          status.textContent = 'Your mail app should open with the brief. If nothing opens, copy the brief and send it to ' + email + '.';
+        } else {
+          var copied = function () { status.textContent = 'Copied. Paste it into a message to ' + email + '.'; };
+          var failed = function () { status.textContent = 'Copying is blocked in this browser. Write to ' + email + ' instead.'; };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(body).then(copied, failed);
+          else failed();
+        }
+      });
+    })();
+  </script>
 </Base>

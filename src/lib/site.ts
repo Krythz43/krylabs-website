@@ -5,9 +5,16 @@ export const site = {
   tagline: 'Your iPhone app, from idea to App Store.',
   // Deliberately does not list the apps: the collections change, this string would not.
   description:
-    'Krylabs is an iOS app studio in Bengaluru. Work directly with Krithick Santhosh, an iOS engineer from Blinkit and PhonePe, to design, build and ship a native iPhone app.',
+    'Krylabs is an iOS app studio in Bengaluru. Work directly with Krithick Santhosh, an iOS engineer from Blinkit and PhonePe, to design, build and ship a native iPhone app, or to add a Live Activity to the one you have.',
   email: 'info.krylabs@gmail.com',
   phone: '+91-8597165755',
+  /**
+   * A page where a visitor can pick a slot for an intro call (Cal.com, Calendly, a Google
+   * Calendar appointment schedule). The home page shows a "Book a call" button once this
+   * is set; with null there is no button.
+   */
+  bookingUrl: null as string | null,
+  timezone: 'Indian Standard Time (UTC+5:30)',
   founder: {
     name: 'Krithick Santhosh',
     role: 'Founder and developer',

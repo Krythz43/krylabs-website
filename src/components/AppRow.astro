@@ -26,11 +26,12 @@ const primary = primaryLink(app);
       </div>
     </div>
     <p class="row__desc">{d.summary}</p>
+    {d.built && <p class="row__built"><span>Built with</span> {d.built}</p>}
     <AppFacts app={app} />
     <p class="row__links">
       <a class="link" href={href}>About {d.name}</a>
       {primary && (
-        <a class="link link--quiet" href={primary.href} {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>
+        <a class="link link--quiet" href={primary.href} data-e={`store-${app.id}`} {...(primary.external ? { target: '_blank', rel: 'noopener' } : {})}>
           {primary.label}
         </a>
       )}

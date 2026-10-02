@@ -4,6 +4,8 @@ interface Item {
   t: string;
   d: string;
   href?: string;
+  /** A short line under the title, e.g. an offer's length and price. */
+  meta?: string;
 }
 
 interface Props {
@@ -17,10 +19,13 @@ const { items, numbered = false } = Astro.props;
 <div class="defs">
   {items.map((it, i) => (
     <div class="defs__item">
-      <h3>
-        {numbered && <span class="num">{i + 1}</span>}
-        {it.href ? <a class="link" href={it.href}>{it.t}</a> : it.t}
-      </h3>
+      <div>
+        <h3>
+          {numbered && <span class="num">{i + 1}</span>}
+          {it.href ? <a class="link" href={it.href}>{it.t}</a> : it.t}
+        </h3>
+        {it.meta && <p class="defs__meta">{it.meta}</p>}
+      </div>
       <p>{it.d}</p>
     </div>
   ))}

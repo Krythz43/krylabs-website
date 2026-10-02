@@ -6,6 +6,7 @@ icon: ../../assets/icons/reelmark.jpg
 storeId: 6758064805
 platforms: [iPhone]
 order: 1
+built: SwiftUI and SwiftData, share and action extensions that take a reel straight from Instagram, and StoreKit for the paid tier.
 featured: true
 hero:
   title: Keep the reels you love.

@@ -2,8 +2,13 @@
 #
 # Two jobs:
 #   1. Serve the built Astro site from ./dist.
-#   2. Keep the LEGACY API paths on the apex alive by proxying them onward to
-#      api.krylabs.com, which routes through the `bntunnel` tunnel to the Go API.
+#   2. Keep the LEGACY API paths on the apex alive by proxying them to the Go API, which
+#      has run on this same droplet since 2026-09-22.
+#
+# This file is the reference copy of the `:3070` block. The config Caddy actually loads is
+# /etc/caddy/Caddyfile on the droplet, which also holds another site: a change here has to
+# be copied into that file, followed by `systemctl restart caddy` (the admin endpoint is
+# off, so `caddy reload` cannot reach the running server).
 #
 # Why (2) exists: shipped iOS/Android builds call https://krylabs.com/api/... and cannot be
 # updated retroactively — users update on their own schedule, or never. Moving krylabs.com
@@ -32,11 +37,10 @@
 	# before the static handler, so /api/* never falls through to the file server.
 	@api path /api/* /auth/* /config /health /eventsweb /events /event-detail /_next/*
 	handle @api {
-		reverse_proxy https://api.krylabs.com {
-			# Cloudflare routes by Host, so it must say api.krylabs.com and not the
-			# apex — otherwise the request loops straight back to this origin.
-			header_up Host api.krylabs.com
-		}
+		# The API moved onto this droplet 2026-09-22 (PM2 `bubblenest`, /opt/bubblenest).
+		# Straight to loopback: going out to https://api.krylabs.com would now hairpin
+		# through Cloudflare and back into this same host.
+		reverse_proxy 127.0.0.1:8080
 	}
 
 	# The website itself. try_files reproduces Astro's `build.format: 'directory'` layout

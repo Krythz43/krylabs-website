@@ -1,8 +1,9 @@
 # krylabs-website
 
 The Krylabs studio site, [krylabs.com](https://krylabs.com). Astro 5, compiled to static HTML,
-served by Caddy on the droplet. No client-side framework; one ten-line inline script on every page,
-plus a short one on build notes that highlights the current section in the margin.
+served by Caddy on the droplet. No client-side framework; one short inline script on every page
+(the nav hairline and the click counts, see [Traffic](#traffic)), the brief form's script on the
+home page, and a short one on build notes that highlights the current section in the margin.
 
 Split out of `MatchMyVibe-Backend` on 2026-08-02. History before that date lives in that repo.
 
@@ -14,6 +15,7 @@ npm run dev        # dev server with HMR → http://localhost:4321
 npm run build      # static build → ./dist (also renders the /og/*.png images)
 npm run preview    # serve ./dist to sanity-check the build
 npm run sync       # refresh App Store data + screenshots (see below), then commit the result
+npm run traffic    # visits, pages and contact clicks from Caddy's access log (see Traffic)
 npm start          # zero-dependency production server → http://127.0.0.1:3070
 ```
 
@@ -25,8 +27,12 @@ npm start          # zero-dependency production server → http://127.0.0.1:3070
   (ssh alias `leadoven`) → Caddy on `:3070` serving `/opt/krylabs-website/dist` (config: this
   repo's `Caddyfile`).
 - The Caddy `@api` matcher proxies the legacy apex paths (`/api`, `/auth`, `/health`, `/config`,
-  `/eventsweb`, `/events`, `/event-detail`, `/_next`) onward to `api.krylabs.com`. Already-shipped
-  app builds call the apex and can't be updated retroactively; new builds call `api.krylabs.com`.
+  `/eventsweb`, `/events`, `/event-detail`, `/_next`) to the Go API, which runs on the same droplet
+  (`127.0.0.1:8080`). Already-shipped app builds call the apex and can't be updated retroactively;
+  new builds call `api.krylabs.com`.
+- Caddy loads `/etc/caddy/Caddyfile`, not this repo's copy, and that file also serves another
+  site. After changing the `:3070` block here, copy the change into that file and run
+  `systemctl restart caddy` (the admin endpoint is off, so `caddy reload` does not work).
 - The laptop still runs `krylabs-website` under PM2 on `127.0.0.1:3070`, but nothing routes
   public traffic to it. Restarting it does **not** deploy.
 
@@ -76,6 +82,7 @@ src/
 │   └── legal/             # company legal: terms, privacy, refunds, shipping, pricing, contact
 └── styles/global.css      # the whole design system
 scripts/sync-appstore.mjs  # pulls listing data + screenshots from the iTunes lookup API
+scripts/traffic.mjs        # reads Caddy's access log: visits, pages, referrers, contact clicks
 scripts/make-logo.mjs      # renders public/logo.png (the Organization logo in JSON-LD)
 public/                    # copied verbatim into dist/ (see below)
 server.js                  # zero-dependency static server (fallback; Caddy is the origin)
@@ -101,6 +108,28 @@ sets `id:`. The entries set the ids the previous pages exposed (`#features`, `#h
 fails on duplicate or reserved ids, and on an app slug that would collide with an existing page,
 a public file, an apex path the Caddyfile proxies to the API, or a home-page section id.
 
+### The home page's sales content
+
+Everything a client reads on the home page is an array at the top of `src/pages/index.astro`.
+Three of them are waiting on facts only the founder has:
+
+- **`offers`** (the "Start small" section): each fixed-scope project has a `length` and an
+  optional `price`. With no `price` the line reads "Fixed price, agreed before work starts".
+  Set `price: 'From ₹…'` (or rupees and dollars together) to print a figure instead.
+- **`testimonials`**: empty, so the "In their words" section is not rendered. Add
+  `{ quote, name, role, href }` entries, with the person's permission, and it appears after
+  the work.
+- **`bookingUrl`** in `src/lib/site.ts`: `null`, so there is no "Book a call" link. Set it
+  to a scheduling page and the link appears in the contact section.
+
+An app's `built:` line in `src/content/apps/<slug>.md` is the "Built with" sentence on its home
+row. It is for readers who are hiring, so it lists what the app is made of; keep it to things
+the code really does.
+
+The contact section's brief form has no server. Its script writes the answers into one message
+and hands it to WhatsApp, the visitor's mail app or the clipboard. Without JavaScript the form
+stays hidden and the email and WhatsApp links under it are the way in.
+
 ### `public/` — not just assets
 
 `public/` holds pages carried over from the pre-Astro site that are **referenced by app store /
@@ -116,6 +145,28 @@ URLs are byte-identical to before:
 | `/blockbud/privacy.html`, `/blockbud/terms.html` | BlockBud legal (the index is now an Astro page) |
 | `/oneatatime/privacy.html`, `/oneatatime/terms.html`, `/oneatatime/support.html` | One legal + support |
 | `/static/css/style.css`, `/static/js/app.js` | the stylesheet those pages load |
+
+## Traffic
+
+There is no analytics service and no cookie. Caddy already writes every request to
+`/var/log/caddy/krylabs-website.log`, and `scripts/traffic.mjs` turns that log into a report:
+
+```bash
+ssh leadoven 'cat /var/log/caddy/krylabs-website.log' | npm run --silent traffic              # last 30 days
+ssh leadoven 'cat /var/log/caddy/krylabs-website.log' | npm run --silent traffic -- --days 7
+```
+
+- **Visits** are one per address and browser per day, counted only when that browser also
+  fetched a stylesheet, script or font. Most page requests come from crawlers that send an
+  ordinary browser's user agent and never load the page's assets; those are left out, along
+  with anything that calls itself a bot. Headless browsers still get through, so treat the
+  totals as a ceiling.
+- **Clicks**: pressing a link or button with `data-e="name"` requests `/e.gif?n=name`, a
+  one-pixel file in `public/` (the listener is in `Base.astro`). The line in the access log is
+  the record, so no server configuration is involved. The hero buttons, the contact links, the
+  brief form's three send buttons and every App Store button have one. To count another link,
+  give it a `data-e`.
+- `/legal/privacy/` describes this under "Website visits". Change both together.
 
 ## Design system
 

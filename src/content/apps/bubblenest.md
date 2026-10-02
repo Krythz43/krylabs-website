@@ -6,6 +6,7 @@ icon: ../../assets/icons/bubblenest.jpg
 storeId: 6743532224
 platforms: [iPhone, Android]
 order: 2
+built: SwiftUI, real-time chat over WebSockets, StoreKit in-app purchases, Sign in with Apple and Google, Fastlane releases, and a Go backend shared with the Android app.
 featured: true
 download:
   label: Download the app

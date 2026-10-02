@@ -6,6 +6,7 @@ icon: ../../assets/icons/one.png
 platforms: [iPhone, iPad, Mac]
 status: in-development
 order: 5
+built: One SwiftUI app across iPhone, iPad and Mac, iCloud sync with no server of its own, and a Live Activity for the current task.
 hero:
   title: Tackle your day one task at a time.
   lead: Plan today and the days ahead. Schedule a task for three days later and forget about it. When it is time, One reminds you. Everything syncs through your own iCloud, with no servers in between.
