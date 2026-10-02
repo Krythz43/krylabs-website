@@ -6,10 +6,12 @@ import Defs from '../components/Defs.astro';
 import Founder from '../components/Founder.astro';
 import PostItem from '../components/PostItem.astro';
 import Socials from '../components/Socials.astro';
-import { getApps, getPosts, onAppStore, shotsFor, HOME_IDS } from '../lib/apps';
+import Stack from '../components/Stack.astro';
+import Faq from '../components/Faq.astro';
+import { getApps, getPosts, onAppStore, listingFor, shotsFor, HOME_IDS } from '../lib/apps';
 import { site, credentials, workHistory, whatsapp, phoneDisplay } from '../lib/site';
 import { portraitUrl } from '../lib/portrait';
-import { organization, person, website } from '../lib/jsonld';
+import { organization, person, website, faqPage } from '../lib/jsonld';
 
 const apps = await getApps();
 const allPosts = await getPosts();
@@ -28,14 +30,37 @@ const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
 const perApp = apps.filter((a) => a.data.featured).map((a) => shotsFor(a, 2));
 const heroShots = [0, 1].flatMap((i) => perApp.flatMap((shots) => shots.slice(i, i + 1)));
 
+// Apps that are still being worked on: a store update within the past year, as of this build.
+const yearAgo = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+const shipping = apps.flatMap((a) => {
+  const l = listingFor(a);
+  return l && l.updated >= yearAgo ? [{ name: a.data.name, version: l.version }] : [];
+});
+const shippingLine = new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(
+  shipping.map((s, i) => (i === 0 ? `${s.name} is on version ${s.version}` : `${s.name} on ${s.version}`)),
+);
+
+// The track record, arranged as the checks a careful buyer makes before hiring an iOS
+// developer: can I install something they shipped, do they keep it alive, have they worked
+// at scale, do releases and crashes have an owner, can I read their code. Each row answers
+// one with something the reader can go and verify.
 const track = [
   {
-    t: 'Blinkit',
-    d: "Built the order-tracking Live Activity on the lock screen and in the Dynamic Island as the only iOS developer on it, plus an in-house analytics pipeline in Swift and Objective-C, and Fastlane release automation that made builds 41% faster.",
+    t: 'Live apps you can install',
+    d: `${cap(num(storeCount))} apps on the App Store, each designed, built and published end to end. Install one before you call.`,
+    href: `#${HOME_IDS.apps}`,
+  },
+  ...(shipping.length > 0 ? [{ t: 'Still shipping after launch', d: `${shippingLine}, each updated in the past year.` }] : []),
+  {
+    t: 'Work at scale',
+    d: "Built Blinkit's order-tracking Live Activity on the lock screen and in the Dynamic Island as the only iOS developer on it, plus an in-house analytics pipeline in Swift and Objective-C. Before that, payments at PhonePe, one of the most heavily used apps in India.",
     href: blinkit ? `/writing/${blinkit.id}/` : undefined,
   },
-  { t: 'PhonePe', d: 'iOS engineer on payments, one of the most heavily used apps in India.' },
-  { t: `${site.name}`, d: `${cap(num(storeCount))} apps of its own live on the App Store, each designed, built and published end to end.`, href: `#${HOME_IDS.apps}` },
+  {
+    t: 'Releases and crashes with an owner',
+    d: 'Fastlane release automation that made Blinkit\'s builds 41% faster, and crash alerts that reached the team in Slack. BubbleNest goes to the App Store through a Fastlane pipeline today.',
+  },
+  { t: 'Code you can read', d: 'The source of this website is public, with its full commit history.', href: `${site.founder.github}/krylabs-website` },
 ];
 
 // Fixed-scope work: a small first project with a set length, for an app that already exists.
@@ -89,23 +114,27 @@ const process = [
   { t: 'Launch and run', d: 'App Store submission, a 30-day bug warranty, then updates and monitoring if you want them.' },
 ];
 
-const stack = [
-  { t: 'Design', d: 'Figma' },
-  { t: 'Language and UI', d: 'Swift 6, SwiftUI, Objective-C' },
-  { t: 'AR and 3D', d: 'ARKit, RealityKit, Unity' },
-  { t: 'Build and ship', d: 'Xcode, TestFlight, App Store Connect' },
-];
-
 const first = site.founder.name.split(' ')[0];
+// The first eight questions are Frame Sixty's iOS FAQ (framesixty.com/ios-app-development-company),
+// taken word for word at the founder's request, with the company name changed. The few
+// departures are where their answer would not be true here: the cross-platform answer ends
+// before "We build both"; the submission answer leaves out "hundreds of apps"; the launch
+// answer opens with this studio's own warranty in place of "Most clients keep us on"; the
+// takeover answer drops React Native and Flutter; TestFlight builds are weekly and the code
+// is the client's from the first day, as the promises above say. The last four are ours.
 const faq = [
-  { t: 'How much does an app cost?', d: 'It depends on scope: how many screens, whether the app needs its own backend, payments or real-time features, and how much design already exists. After a short call you get a written estimate split into milestones, so you pay as each part is delivered. A Live Activity or a UX audit is a fixed price, agreed before work starts.' },
-  { t: 'How long will it take?', d: 'The estimate comes with a timeline for each milestone. During the build you get a new TestFlight build every week, so progress is something you can hold, not a status report.' },
+  { t: 'How much does iOS app development cost?', d: 'The cost of an iOS app depends on scope: a single-flow MVP is a different budget from a multi-role product with backend integrations and a release cadence. Project work is quoted as a fixed bid after a discovery call, so the full cost is clear before development begins. A 30-minute call produces an accurate range for your idea.' },
+  { t: 'How long does iOS app development take from kickoff to the App Store?', d: 'A focused iOS app typically takes three to four months from kickoff to App Store; larger products with backends and multiple user roles run six months or more. Design and engineering overlap rather than running end to end, and we ship a working TestFlight build every week so progress stays visible.' },
+  { t: 'Should I build a native Swift app or go cross-platform?', d: 'Build native Swift when performance, platform features or long-term maintainability matter — camera work, ARKit, HealthKit, widgets and background processing all behave better natively. Cross-platform earns its place when the same straightforward app has to ship on iOS and Android at once.' },
+  { t: 'Can one codebase cover both iPhone and iPad?', d: 'Yes — a SwiftUI codebase targets iPhone and iPad together. We design the iPad layout deliberately rather than stretching the phone screen: split views, keyboard and trackpad support, and Apple Pencil where it fits. That costs a fraction of building a second app while still giving iPad users an interface built for the larger canvas.' },
+  { t: 'Do you handle App Store submission and review?', d: 'Yes — App Store Connect setup, provisioning, privacy nutrition labels, screenshots and the review process are part of every build we deliver.' },
+  { t: 'What happens after my iOS app launches?', d: 'Bugs found in the first 30 days are fixed free. Apple deprecates APIs as it ships, so an app with no maintenance plan degrades on a predictable schedule. Support is scoped monthly or per release, whichever suits you.' },
+  { t: 'Can you take over an existing iOS app?', d: 'Yes. We start with a code and architecture review, then give you an honest read: what is salvageable, what needs rewriting, and what each path costs. We take over Swift and Objective-C codebases.' },
+  { t: `Will I own my iOS app's source code, and does ${site.name} sign an NDA?`, d: `Yes — ${site.name} signs NDAs before you share anything sensitive, and you own the app and its full Swift source code from the first day. The source ships with documentation any future iOS developer can pick up, so you are never locked into working with us.` },
   { t: 'Who will I work with?', d: `${first}, who designs and builds the app. There is no account manager relaying messages, so questions are answered by the person who can change the code.` },
   { t: 'What if you become unavailable?', d: 'The code lives in your own repository from the first day, written in standard Swift and SwiftUI, so any iOS developer can pick it up. You are never locked in.' },
   { t: 'Do you work with clients outside India?', d: `Yes. The work is remote by default: a call to start, then a TestFlight build on your phone and a written update every week. The studio is on ${site.timezone}, and calls are arranged to overlap with your working day.` },
   { t: 'Do you build for Android too?', d: "No. Client work is native iOS only: Swift for iPhone, with iPad and Mac when the app calls for them. (The studio's own BubbleNest has an Android version too.)" },
-  { t: 'Can you take over an app that already exists?', d: 'Yes. A redesign or a UX audit is a good starting point for an iOS app that works but does not feel right yet.' },
-  { t: 'What happens after launch?', d: 'Bugs found in the first 30 days are fixed free. After that the studio can stay on to ship new versions, keep the app current with each iOS release and watch its crash reports.' },
 ];
 
 // The email opens with the four things needed to reply usefully, so nobody faces a blank page.
@@ -115,18 +144,21 @@ const chat = whatsapp();
 // The brief form builds its own message, so it needs the bare WhatsApp link to append to.
 const chatBase = whatsapp('');
 
+// The page follows the questions a buyer asks, in the order they ask them: can this person
+// do it (track record), show me (work), who is it (founder), how do I start (offers,
+// services), how will it run (process, promises), with what (stack), what about... (FAQ).
 // Sections alternate between paper and the soft band. The order is listed once, with the
-// optional sections left out when they are empty, so the bands never double up.
+// optional sections left out when they are empty, so the bands never double up. The stack
+// is a dark card on paper and sits between two bands of its own accord.
 const order = [
   HOME_IDS.track,
-  HOME_IDS.offers,
-  HOME_IDS.promises,
-  HOME_IDS.services,
-  HOME_IDS.process,
   HOME_IDS.apps,
   ...(testimonials.length > 0 ? [HOME_IDS.testimonials] : []),
-  HOME_IDS.stack,
   HOME_IDS.founder,
+  HOME_IDS.offers,
+  HOME_IDS.services,
+  HOME_IDS.process,
+  HOME_IDS.promises,
   HOME_IDS.faq,
   ...(posts.length > 0 ? [HOME_IDS.writing] : []),
   HOME_IDS.contact,
@@ -134,7 +166,7 @@ const order = [
 const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--soft' : ''}`;
 ---
 
-<Base title={`${site.name}: iOS app development studio in Bengaluru`} jsonLd={[organization(), person(await portraitUrl()), website()]}>
+<Base title={`${site.name}: iOS app development studio in Bengaluru`} jsonLd={[organization(), person(await portraitUrl()), website(), faqPage(faq)]}>
   <section class="hero">
     <div class="container">
       <p class="kicker hero__kicker">{site.name} is an iOS app studio in Bengaluru.</p>
@@ -157,56 +189,9 @@ const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--
     <div class="container">
       <div class="section__head">
         <h2 class="display">Track record</h2>
-        <p class="kicker">Where the experience comes from.</p>
+        <p class="kicker">{cap(num(track.length))} things worth checking before you hire an iOS developer.</p>
       </div>
       <Defs items={track} />
-    </div>
-  </section>
-
-  <section class={band(HOME_IDS.offers)} id={HOME_IDS.offers}>
-    <div class="container">
-      <div class="section__head">
-        <h2 class="display">Start small</h2>
-        <p class="kicker">Two fixed-scope projects for an app you already have.</p>
-      </div>
-      <Defs items={offerItems} />
-      <p class="section__after">
-        Starting from an idea instead? <a class="link" href={`#${HOME_IDS.process}`}>See how a full build works</a>.
-      </p>
-    </div>
-  </section>
-
-  <section class={band(HOME_IDS.promises)} id={HOME_IDS.promises}>
-    <div class="container">
-      <div class="section__head">
-        <h2 class="display">What you can count on</h2>
-        <p class="kicker">In writing, on every project.</p>
-      </div>
-      <Defs items={promises} />
-    </div>
-  </section>
-
-  <section class={band(HOME_IDS.services)} id={HOME_IDS.services}>
-    <div class="container">
-      <div class="section__head">
-        <h2 class="display">Services</h2>
-        <p class="kicker">What you can hire {site.name} for.</p>
-      </div>
-      <Defs items={services} />
-    </div>
-  </section>
-
-  <section class={band(HOME_IDS.process)} id={HOME_IDS.process}>
-    <div class="container">
-      <div class="section__head">
-        <h2 class="display">How it works</h2>
-        <p class="kicker">From the first call to the App Store.</p>
-      </div>
-      <p class="lead">
-        Every stage has a decision in it. You get the options and the trade-offs in plain language, so you can
-        decide with confidence.
-      </p>
-      <Defs items={process} numbered />
     </div>
   </section>
 
@@ -243,16 +228,6 @@ const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--
     </section>
   )}
 
-  <section class={band(HOME_IDS.stack)} id={HOME_IDS.stack}>
-    <div class="container">
-      <div class="section__head">
-        <h2 class="display">Stack</h2>
-        <p class="kicker">What the apps are made with.</p>
-      </div>
-      <Defs items={stack} />
-    </div>
-  </section>
-
   <section class={band(HOME_IDS.founder)} id={HOME_IDS.founder}>
     <div class="container">
       <Founder>
@@ -266,12 +241,70 @@ const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--
     </div>
   </section>
 
-  <section class={band(HOME_IDS.faq)} id={HOME_IDS.faq}>
+  <section class={band(HOME_IDS.offers)} id={HOME_IDS.offers}>
     <div class="container">
       <div class="section__head">
-        <h2 class="display">Questions</h2>
+        <h2 class="display">Start small</h2>
+        <p class="kicker">Two fixed-scope projects for an app you already have.</p>
       </div>
-      <Defs items={faq} />
+      <Defs items={offerItems} />
+      <p class="section__after">
+        Starting from an idea instead? <a class="link" href={`#${HOME_IDS.process}`}>See how a full build works</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class={band(HOME_IDS.services)} id={HOME_IDS.services}>
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Services</h2>
+        <p class="kicker">What you can hire {site.name} for.</p>
+      </div>
+      <Defs items={services} />
+    </div>
+  </section>
+
+  <section class={band(HOME_IDS.process)} id={HOME_IDS.process}>
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">How it works</h2>
+        <p class="kicker">From the first call to the App Store.</p>
+      </div>
+      <p class="lead">
+        Every stage has a decision in it. You get the options and the trade-offs in plain language, so you can
+        decide with confidence.
+      </p>
+      <Defs items={process} numbered />
+    </div>
+  </section>
+
+  <section class={band(HOME_IDS.promises)} id={HOME_IDS.promises}>
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">What you can count on</h2>
+        <p class="kicker">In writing, on every project.</p>
+      </div>
+      <Defs items={promises} />
+    </div>
+  </section>
+
+  <section class="section section--stack" id={HOME_IDS.stack}>
+    <Stack
+      title="Our iOS development stack"
+      lead="The full Apple toolchain: Swift 6, SwiftUI, Xcode, TestFlight and App Store Connect, with ARKit, RealityKit and Unity when an app needs augmented reality or 3D."
+    />
+  </section>
+
+  <section class={band(HOME_IDS.faq)} id={HOME_IDS.faq}>
+    <div class="container">
+      <div class="section__head section__head--center">
+        <h2 class="display">iOS app development FAQs</h2>
+        <p class="lead">
+          Common questions about building an iOS app with {site.name} — what it costs, how long it takes, how native
+          Swift compares to cross-platform, and what happens after launch.
+        </p>
+      </div>
+      <Faq items={faq} />
     </div>
   </section>
 

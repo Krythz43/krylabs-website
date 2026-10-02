@@ -79,6 +79,19 @@ export function website() {
   };
 }
 
+/** The home page's questions, so an answer engine can quote the answer with its source. */
+export function faqPage(items: { t: string; d: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((it) => ({
+      '@type': 'Question',
+      name: it.t,
+      acceptedAnswer: { '@type': 'Answer', text: it.d },
+    })),
+  };
+}
+
 export function softwareApplication(app: CollectionEntry<'apps'>, store: Listing | undefined, screenshotUrls: string[]) {
   const d = app.data;
   const genre = store?.genres?.find((g) => CATEGORY[g]);

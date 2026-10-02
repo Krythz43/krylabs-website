@@ -1,0 +1,21 @@
+---
+// Questions and answers as an accordion: one row per question, opened by its own summary,
+// with no script. The first is open so the section never looks empty.
+interface Props {
+  items: { t: string; d: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="faq">
+  {items.map((it, i) => (
+    <details class="faq__item" open={i === 0}>
+      <summary>
+        <h3>{it.t}</h3>
+        <span class="faq__icon" aria-hidden="true"></span>
+      </summary>
+      <p class="faq__a">{it.d}</p>
+    </details>
+  ))}
+</div>

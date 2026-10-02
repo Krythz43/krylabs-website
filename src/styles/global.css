@@ -165,6 +165,9 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
 .section__head .kicker { flex: 0 0 auto; }
 .section__head + .lead { margin-top: -22px; margin-bottom: 40px; }
 .section__after { margin-top: 26px; color: var(--ink-3); font-size: 0.98rem; }
+/* A centred head, title over one sentence, for the sections that are read rather than scanned. */
+.section__head--center { flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+.section__head--center .lead { max-width: 62ch; font-size: 1.05rem; color: var(--ink-3); }
 
 /* ----------------------------- Hero ----------------------------- */
 .hero { padding: 72px 0 0; }
@@ -310,6 +313,80 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
 .quotes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
 .quote blockquote { font-family: var(--font-serif); font-size: clamp(1.3rem, 2vw, 1.6rem); line-height: 1.25; letter-spacing: -0.01em; }
 .quote figcaption { margin-top: 16px; font-size: 0.92rem; color: var(--muted); }
+
+/* ----------------------------- Stack card ----------------------------- */
+/* A dark card with the tools as bubbles settled along its foot. On wide screens the
+   bubbles are drawn behind the bottom of the card, rising past the text at the edges, and
+   the card reserves the room with padding. Below 760px a second, taller arrangement
+   follows the text instead, so the labels stay a readable size. */
+.section--stack { padding: 24px 12px; }
+.stackcard {
+  position: relative;
+  overflow: hidden;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 77px 24px 31%;
+  border-radius: 48px;
+  background: #17191b;
+  color: #fff;
+  text-align: center;
+}
+.stackcard h2 { max-width: 900px; margin: 0 auto; font-size: clamp(2.3rem, 5vw, 4rem); line-height: 1.15; }
+/* Kept clear of the bubbles that rise beside it at the card's edges. */
+.stackcard__lead { position: relative; z-index: 1; max-width: min(650px, 62%); margin: 30px auto 0; color: #9a9898; font-size: clamp(1.02rem, 1.7vw, 1.375rem); line-height: 1.3; }
+.stackcard__bubbles { display: block; width: 100%; height: auto; }
+.stackcard__bubbles--wide { position: absolute; left: 0; bottom: 0; }
+.stackcard__bubbles--narrow { display: none; }
+.stackcard__bubbles .is-filled { fill: rgba(255, 255, 255, 0.07); }
+.stackcard__bubbles .is-outlined { fill: none; stroke: rgba(255, 255, 255, 0.13); stroke-width: 2; }
+.stackcard__bubbles text { fill: #fff; font-family: var(--font-sans); font-size: 22px; letter-spacing: 0; }
+.stackcard__bubbles--narrow text { font-size: 20px; }
+@media (max-width: 760px) {
+  .stackcard { padding: 56px 20px 0; border-radius: 28px; }
+  .stackcard__lead { max-width: none; }
+  .stackcard__bubbles--wide { display: none; }
+  .stackcard__bubbles--narrow { display: block; width: calc(100% + 40px); max-width: none; margin: 28px -20px 0; }
+}
+
+/* ----------------------------- FAQ accordion ----------------------------- */
+.faq { max-width: 800px; margin: 0 auto; border-top: 1px solid var(--line); }
+.faq__item { border-bottom: 1px solid var(--line); }
+.faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item h3 { font-size: 1.12rem; font-weight: 500; letter-spacing: -0.012em; line-height: 1.35; }
+/* A plus in a ring that becomes a minus when the row is open. */
+.faq__icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  transition: border-color 0.2s var(--ease);
+}
+.faq__icon::before, .faq__icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 1.5px;
+  background: var(--ink-2);
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s var(--ease);
+}
+.faq__icon::after { transform: translate(-50%, -50%) rotate(90deg); }
+.faq__item[open] .faq__icon::after { transform: translate(-50%, -50%) rotate(0deg); }
+.faq__item summary:hover .faq__icon { border-color: var(--ink); }
+.faq__a { padding: 0 58px 26px 0; color: var(--ink-2); font-size: 0.98rem; line-height: 1.65; }
 
 /* ----------------------------- Listing facts ----------------------------- */
 /* "iPhone · Version 3.1, updated August 2026 · Free", with small dots between the spans. */
@@ -517,6 +594,9 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
   body { font-size: 16px; }
   .section { padding: 64px 0; }
   .section__head { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 28px; }
+  .section__head--center { align-items: center; gap: 14px; }
+  .faq__item summary { padding: 20px 0; gap: 16px; }
+  .faq__a { padding-right: 0; }
   .section__head + .lead { margin-top: -12px; margin-bottom: 28px; }
   .hero { padding-top: 40px; }
   .strip { gap: 12px; padding-top: 40px; }
