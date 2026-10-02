@@ -1,9 +1,12 @@
 ---
 // The stack as bubbles settling along the bottom of a dark card: a centred title and one
 // sentence, then a circle per tool, some filled and some only outlined, each label tilted.
-// Two hand-placed arrangements, because ten bubbles that fit a 1280px card become
-// unreadable when that drawing is scaled down to a phone: `wide` is drawn on a 1280x480
-// field and sits behind the foot of the card, `narrow` on 640x560 and follows the text.
+// Three hand-placed arrangements, because ten bubbles that fit a 1280px card become
+// unreadable when that drawing is scaled down: `wide` is drawn on a 1280x480 field and sits
+// behind the foot of the card; `mid` (640 wide, tablets and large phones held sideways) and
+// `phone` (400 wide) follow the text. Each is scaled to the card's width, so its label size
+// (set in global.css, in the drawing's own units) shrinks with it: a field is only used at
+// widths where its labels come out at 12px or more.
 interface Bubble {
   label: string;
   x: number;
@@ -36,7 +39,7 @@ const wide: Bubble[] = [
   b('TestFlight', 1217, 75, 61, -28, false),
 ];
 
-const narrow: Bubble[] = [
+const mid: Bubble[] = [
   b('TestFlight', 120, 150, 60, -28, false),
   b('SwiftUI', 285, 175, 66, 28, true),
   b('App Store Connect', 500, 205, 108, 0, false),
@@ -49,9 +52,23 @@ const narrow: Bubble[] = [
   b('ARKit', 432, 495, 60, 10, true),
 ];
 
+const phone: Bubble[] = [
+  b('TestFlight', 64, 96, 50, -28, false),
+  b('SwiftUI', 160, 136, 46, 28, true),
+  b('App Store Connect', 300, 96, 84, 0, false),
+  b('Figma', 44, 196, 40, 15, true),
+  b('Unity', 150, 226, 40, -50, true),
+  b('Swift', 262, 240, 40, -20, true),
+  b('ARKit', 352, 214, 44, 10, true),
+  b('Xcode', 74, 306, 70, -5, false),
+  b('RealityKit', 202, 322, 54, 12, false),
+  b('Objective-C', 324, 318, 58, 14, true),
+];
+
 const fields = [
   { name: 'wide', box: '0 0 1280 480', bubbles: wide },
-  { name: 'narrow', box: '0 85 640 475', bubbles: narrow },
+  { name: 'mid', box: '0 85 640 475', bubbles: mid },
+  { name: 'phone', box: '0 6 400 370', bubbles: phone },
 ];
 const summary = `${title}: ${wide.map((x) => x.label).sort().join(', ')}`;
 ---

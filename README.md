@@ -121,8 +121,9 @@ then writing and contact. The order is one list, `order`, which also sets the al
   answered with something the reader can verify: live apps, updates in the past year (computed
   from the App Store snapshot at build time), work at scale, releases and crashes, public code.
 - **Stack** (`Stack.astro`) is a dark card with one bubble per tool, modelled on Frame Sixty's
-  stack section. The bubbles are hand-placed in two arrangements, wide and narrow; adding a
-  tool means placing a circle in both.
+  stack section. The bubbles are hand-placed in three arrangements (`wide` above 760px, `mid`
+  down to 480px, `phone` below), each scaled to the card's width, so labels never render
+  under 12px. Adding a tool means placing a circle in all three.
 - **FAQ** (`Faq.astro`) is an accordion of `<details>`, and the same questions are emitted as
   `FAQPage` structured data. The first eight are Frame Sixty's iOS FAQ, copied at the founder's
   request; the comment above the `faq` array lists every place the wording departs from theirs
