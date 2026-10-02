@@ -42,7 +42,7 @@ const jsonLd = [softwareApplication(app, store, screenshotUrls), organization(),
 ---
 
 <Base title={title} description={d.summary} ogImage={`/og/${app.id}.png`} jsonLd={jsonLd}>
-  <section class="page">
+  <section class={`page${shots.length === 0 ? ' page--bare' : ''}`}>
     <div class="container">
       <div class="page__id">
         <Image class="page__icon" src={d.icon} alt="" width={128} height={128} loading="eager" />

@@ -170,7 +170,8 @@ const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--
   <section class="hero">
     <div class="container">
       <p class="kicker hero__kicker">{site.name} is an iOS app studio in Bengaluru.</p>
-      <h1 class="display">{site.tagline}</h1>
+      {/* The heading breaks between phrases: "iPhone app" and "App Store" each stay on one line. */}
+      <h1 class="display">{site.tagline.replace('iPhone app', 'iPhone\u00a0app').replace('App Store', 'App\u00a0Store')}</h1>
       <p class="lead hero__lead">
         For founders and product teams who want a native iOS app done well. You work directly with
         {site.founder.name}, the iOS engineer behind Blinkit's order-tracking Live Activity, from the first sketch to
