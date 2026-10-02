@@ -1,10 +1,11 @@
 ---
 import Legal from '../../layouts/Legal.astro';
+import { site, addressLine } from '../../lib/site';
 ---
 <Legal updated="October 2026" title="Privacy Policy" description="How Krylabs collects, uses and protects your information across its websites, apps and products.">
 
-  <p>This Privacy Policy explains how Krylabs, owned and operated by Krithick Santhosh,
-  Palm 102, SJR Park Vista, Off Harlur Road, Bengaluru, Karnataka 560102, India,
+  <p>This Privacy Policy explains how Krylabs ({site.legalName}, a sole proprietorship owned and
+  operated by Krithick Santhosh, {addressLine})
   collects, uses and protects information when you use our websites, apps and digital products.</p>
 
   <h2>Information we collect</h2>
@@ -45,7 +46,7 @@ import Legal from '../../layouts/Legal.astro';
   <p>
     In accordance with applicable Indian law, the Grievance Officer for Krylabs is:<br />
     <strong>Krithick Santhosh</strong>, Founder<br />
-    Palm 102, SJR Park Vista, Off Harlur Road, Bengaluru, Karnataka 560102, India<br />
+    {addressLine}<br />
     Email: <a href="mailto:info.krylabs@gmail.com">info.krylabs@gmail.com</a><br />
     Phone: <a href="tel:+918597165755">+91-8597165755</a><br />
     Grievances are acknowledged within 24 hours and resolved within 15 days.

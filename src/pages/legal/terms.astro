@@ -1,9 +1,10 @@
 ---
 import Legal from '../../layouts/Legal.astro';
+import { site, addressLine } from '../../lib/site';
 ---
 <Legal updated="October 2026" title="Terms & Conditions" description="Terms & Conditions for Krylabs websites, apps and digital products, operated by Krithick Santhosh.">
 
-  <p>These Terms &amp; Conditions govern your use of the websites, apps and digital products operated by Krylabs ("Krylabs", "we", "us"), owned and operated by Krithick Santhosh, Palm 102, SJR Park Vista, Off Harlur Road, Bengaluru, Karnataka 560102, India. By accessing or using our products, you agree to these terms.</p>
+  <p>These Terms &amp; Conditions govern your use of the websites, apps and digital products operated by {site.legalName} ("Krylabs", "we", "us"), a sole proprietorship owned and operated by Krithick Santhosh, {addressLine}. By accessing or using our products, you agree to these terms.</p>
 
   <h2>Use of our products</h2>
   <p>You may use our apps and services only for lawful purposes and in accordance with these terms. You agree not to misuse the services, interfere with their normal operation, or attempt to access them using a method other than the interface and instructions we provide.</p>
@@ -32,7 +33,7 @@ import Legal from '../../layouts/Legal.astro';
   <p>We may update these terms from time to time. Continued use of our products after changes take effect constitutes acceptance of the revised terms.</p>
 
   <h2>Governing law</h2>
-  <p>These terms are governed by the laws of India. Any disputes are subject to the exclusive jurisdiction of the courts of Bengaluru, Karnataka.</p>
+  <p>These terms are governed by the laws of India. Any disputes are subject to the exclusive jurisdiction of the courts of Chennai, Tamil Nadu.</p>
 
   <h2>Contact</h2>
   <p>Questions about these terms? Email <a href="mailto:info.krylabs@gmail.com">info.krylabs@gmail.com</a> or call <a href="tel:+918597165755">+91-8597165755</a>. Full business details are on our <a href="/legal/contact/">Contact</a> page.</p>

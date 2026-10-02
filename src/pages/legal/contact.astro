@@ -1,9 +1,10 @@
 ---
 import Legal from '../../layouts/Legal.astro';
+import { site, addressLine } from '../../lib/site';
 ---
-<Legal updated="August 2026" title="Contact" description="Contact Krylabs — owned and operated by Krithick Santhosh, Bengaluru, India.">
+<Legal updated="October 2026" title="Contact" description={`Contact ${site.legalName}, a sole proprietorship owned and operated by Krithick Santhosh.`}>
 
-  <p>Krylabs is owned and operated by <strong>Krithick Santhosh</strong>, based in Bengaluru, Karnataka, India.</p>
+  <p>Krylabs is the trading name of <strong>{site.legalName}</strong>, a sole proprietorship owned and operated by <strong>Krithick Santhosh</strong>.</p>
 
   <h2>Get in touch</h2>
   <p>
@@ -14,8 +15,11 @@ import Legal from '../../layouts/Legal.astro';
 
   <h2>Business details</h2>
   <p>
-    <strong>Legal name:</strong> Krithick Santhosh (individual), doing business as Krylabs<br />
-    <strong>Operational address:</strong> Palm 102, SJR Park Vista, Off Harlur Road, Bengaluru, Karnataka 560102, India
+    <strong>Legal name:</strong> {site.legalName}<br />
+    <strong>Constitution:</strong> Sole proprietorship<br />
+    <strong>Proprietor:</strong> {site.founder.legalName}<br />
+    <strong>Udyam Registration No.:</strong> {site.udyam}<br />
+    <strong>Registered address:</strong> {addressLine}
   </p>
 
   <h2>Grievances</h2>
