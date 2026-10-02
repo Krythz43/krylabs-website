@@ -1,0 +1,74 @@
+---
+// The stack as bubbles settling along the bottom of a dark card: a centred title and one
+// sentence, then a circle per tool, some filled and some only outlined, each label tilted.
+// Two hand-placed arrangements, because ten bubbles that fit a 1280px card become
+// unreadable when that drawing is scaled down to a phone: `wide` is drawn on a 1280x480
+// field and sits behind the foot of the card, `narrow` on 640x560 and follows the text.
+interface Bubble {
+  label: string;
+  x: number;
+  y: number;
+  r: number;
+  /** Degrees the label is turned. */
+  tilt: number;
+  filled: boolean;
+}
+
+interface Props {
+  title: string;
+  lead: string;
+}
+
+const { title, lead } = Astro.props;
+
+const b = (label: string, x: number, y: number, r: number, tilt: number, filled: boolean): Bubble => ({ label, x, y, r, tilt, filled });
+
+const wide: Bubble[] = [
+  b('Figma', 62, 161, 62, 15, true),
+  b('Unity', 305, 242, 62, -50, true),
+  b('Xcode', 134, 346, 133, -5, false),
+  b('RealityKit', 360, 389, 91, 12, false),
+  b('Swift', 514, 418, 62, -20, true),
+  b('ARKit', 752, 388, 91, 10, true),
+  b('App Store Connect', 970, 353, 124, 0, false),
+  b('SwiftUI', 1134, 208, 91, 28, true),
+  b('Objective-C', 1186, 388, 91, 14, true),
+  b('TestFlight', 1217, 75, 61, -28, false),
+];
+
+const narrow: Bubble[] = [
+  b('TestFlight', 120, 150, 60, -28, false),
+  b('SwiftUI', 285, 175, 66, 28, true),
+  b('App Store Connect', 500, 205, 108, 0, false),
+  b('Figma', 58, 285, 55, 15, true),
+  b('Unity', 195, 300, 55, -50, true),
+  b('Swift', 335, 310, 55, -20, true),
+  b('Objective-C', 548, 400, 82, 14, true),
+  b('Xcode', 108, 455, 105, -5, false),
+  b('RealityKit', 290, 482, 78, 12, false),
+  b('ARKit', 432, 495, 60, 10, true),
+];
+
+const fields = [
+  { name: 'wide', box: '0 0 1280 480', bubbles: wide },
+  { name: 'narrow', box: '0 85 640 475', bubbles: narrow },
+];
+const summary = `${title}: ${wide.map((x) => x.label).sort().join(', ')}`;
+---
+
+<div class="stackcard">
+  <h2 class="display">{title}</h2>
+  <p class="stackcard__lead">{lead}</p>
+  <div role="img" aria-label={summary}>
+    {fields.map((f) => (
+      <svg class={`stackcard__bubbles stackcard__bubbles--${f.name}`} viewBox={f.box} aria-hidden="true">
+        {f.bubbles.map((c) => (
+          <g>
+            <circle class={c.filled ? 'is-filled' : 'is-outlined'} cx={c.x} cy={c.y} r={c.r} />
+            <text x={c.x} y={c.y} transform={`rotate(${c.tilt} ${c.x} ${c.y})`} text-anchor="middle" dominant-baseline="central">{c.label}</text>
+          </g>
+        ))}
+      </svg>
+    ))}
+  </div>
+</div>

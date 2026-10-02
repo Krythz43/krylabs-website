@@ -62,7 +62,7 @@ src/
 │   ├── icons/             # app icons (png/jpg, see below) and svg marks for web products
 │   ├── products/          # one screenshot of each web product's live site
 │   └── krithick-santhosh.jpg
-├── components/            # Strip (phone screenshots), AppRow, AppFacts, ProductTile, Defs, Founder, PostItem, Socials
+├── components/            # Strip (phone screenshots), AppRow, AppFacts, ProductTile, Defs, Faq, Stack, Founder, PostItem, Socials
 ├── layouts/Base.astro     # <head> meta/OG/JSON-LD, nav, footer, the one script
 ├── layouts/Legal.astro    # wrapper for /legal/* and the BubbleNest /privacy + /terms pages
 ├── lib/
@@ -111,7 +111,24 @@ a public file, an apex path the Caddyfile proxies to the API, or a home-page sec
 ### The home page's sales content
 
 Everything a client reads on the home page is an array at the top of `src/pages/index.astro`.
-Three of them are waiting on facts only the founder has:
+
+The sections follow the questions a buyer asks, in the order they ask them: can this person do
+it (track record), show me (work), who is it (founder), how do I start (start small, services),
+how will it run (how it works, what you can count on), with what (stack), what about... (FAQ),
+then writing and contact. The order is one list, `order`, which also sets the alternating bands.
+
+- **Track record** is written as the checks worth making before hiring an iOS developer, each
+  answered with something the reader can verify: live apps, updates in the past year (computed
+  from the App Store snapshot at build time), work at scale, releases and crashes, public code.
+- **Stack** (`Stack.astro`) is a dark card with one bubble per tool, modelled on Frame Sixty's
+  stack section. The bubbles are hand-placed in two arrangements, wide and narrow; adding a
+  tool means placing a circle in both.
+- **FAQ** (`Faq.astro`) is an accordion of `<details>`, and the same questions are emitted as
+  `FAQPage` structured data. The first eight are Frame Sixty's iOS FAQ, copied at the founder's
+  request; the comment above the `faq` array lists every place the wording departs from theirs
+  and why. Keep an answer only while it is true of this studio.
+
+Three more are waiting on facts only the founder has:
 
 - **`offers`** (the "Start small" section): each fixed-scope project has a `length` and an
   optional `price`. With no `price` the line reads "Fixed price, agreed before work starts".
