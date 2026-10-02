@@ -179,7 +179,9 @@ ssh leadoven 'cat /var/log/caddy/krylabs-website.log' | npm run --silent traffic
   renderer and the logo script use the same package's WOFF files, so there is one copy of each
   face in the repo.
 - **Imagery:** real App Store screenshots are the only decoration. The hero strip is one
-  screenshot from each featured app, then a second from each.
+  screenshot from each featured app, then a second from each. Each app's row on the home page
+  shows every screenshot from its listing: in one line on a wide screen, as a scrolling strip
+  below 900px. So a new store screenshot reaches the home page with `npm run sync`.
 - **Motion:** two entrance animations (the hero strip rises on load; the writing pages' text
   arrives a line at a time) and cross-document view transitions in CSS. Nothing on scroll, nothing on hover beyond a border. `prefers-reduced-motion`
   turns the entrance off.
