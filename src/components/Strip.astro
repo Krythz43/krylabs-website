@@ -2,7 +2,8 @@
 // A row of phone screenshots at their native aspect ratio.
 //   hero  - the home page strip, bleeds right and scrolls sideways
 //   page  - the same on an app page
-//   row   - two shots beside an app row, no scrolling
+//   sheet - every shot of one app under its home page row: on a wide screen they share one
+//           line with no scrolling, on a narrow one they scroll like the other two
 // Store screenshots come in more than one shape (CocoTree's are 9:16, the rest are the 6.7"
 // iPhone size). The scrolling strips give every card the same height and each card takes its
 // width from its own ratio; both numbers are emitted here as custom properties for global.css.
@@ -11,7 +12,7 @@ import type { Shot } from '../lib/apps';
 
 interface Props {
   shots: Shot[];
-  variant?: 'hero' | 'page' | 'row';
+  variant?: 'hero' | 'page' | 'sheet';
   /** How many images load eagerly (the ones above the fold). */
   eager?: number;
 }
@@ -19,21 +20,25 @@ interface Props {
 const { shots, variant = 'page', eager = 0 } = Astro.props;
 
 // Card heights on phones (the 760px breakpoint in global.css) and above, for the scrolling
-// strips. The row is sized by width instead (--shot-w in global.css) so it can shrink into
-// its column; its aspect ratio still comes from --r.
-const heights = { hero: { phone: 364, desktop: 485 }, page: { phone: 433, desktop: 520 } };
-const height = variant === 'row' ? null : heights[variant];
+// strips. The sheet only scrolls below 900px; above that its cards are sized by width, an
+// equal share of the container (see .strip--sheet), and --r still sets their height.
+const heights = { hero: { phone: 364, desktop: 485 }, page: { phone: 433, desktop: 520 }, sheet: { phone: 340, desktop: 380 } };
+const height = heights[variant];
 const ratio = (s: Shot) => s.img.width / s.img.height;
+// The sheet's card width on a wide screen: the container's 1024px less the gaps, shared
+// equally, and never wider than the cap in global.css.
+const SHEET = { inner: 1024, gap: 14, cap: 200 };
+const sheetWidth = Math.round(Math.min(SHEET.cap, (SHEET.inner - (shots.length - 1) * SHEET.gap) / Math.max(shots.length, 1)));
 
 // The synced screenshots are 640px wide. 640 keeps a 9:16 card (up to 292px) sharp at 2x;
 // 480 stays because src/pages/[app].astro reuses that size for the JSON-LD screenshot URLs.
-const widths = variant === 'row' ? [200, 400] : [240, 480, 640];
+const widths = variant === 'sheet' ? [200, 400] : [240, 480, 640];
 // The card's rendered width, so the browser picks the right srcset candidate.
 const sizesFor = (s: Shot) =>
-  height
-    ? `(max-width: 760px) ${Math.round(height.phone * ratio(s))}px, ${Math.round(height.desktop * ratio(s))}px`
-    : '(max-width: 900px) 180px, 200px';
-const stripStyle = height ? `--shot-h:${height.desktop}px; --shot-h-phone:${height.phone}px` : undefined;
+  variant === 'sheet'
+    ? `(max-width: 760px) ${Math.round(height.phone * ratio(s))}px, (max-width: 900px) ${Math.round(height.desktop * ratio(s))}px, ${sheetWidth}px`
+    : `(max-width: 760px) ${Math.round(height.phone * ratio(s))}px, ${Math.round(height.desktop * ratio(s))}px`;
+const stripStyle = `--shot-h:${height.desktop}px; --shot-h-phone:${height.phone}px`;
 ---
 
 <div class={`strip strip--${variant}`} style={stripStyle}>

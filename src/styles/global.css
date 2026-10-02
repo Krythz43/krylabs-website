@@ -182,6 +182,9 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  /* Without this the first card snaps to the strip's edge and scrolls the gutter away, so
+     it sits flush against the screen instead of in line with the text above it. */
+  scroll-padding-inline: var(--gutter);
   padding: 56px var(--gutter) 8px;
   margin: 0 calc(-1 * var(--gutter));
   scrollbar-width: none;
@@ -222,29 +225,30 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
   .strip--hero, .strip--page { margin-right: calc(-1 * (100vw - var(--container)) / 2 - var(--gutter)); padding-right: 40px; }
 }
 
-/* Beside an app row: two shots from the same app, no scrolling, no bleed. These are sized by
-   width so they can shrink to fit the column; the aspect ratio still sets the height. */
-.strip--row {
-  --shot-w: 200px;
-  overflow: visible;
-  scroll-snap-type: none;
-  padding: 0;
-  margin: 0;
-  gap: 14px;
-  justify-content: flex-end;
+/* Under an app row: every screenshot from that app's listing. Below 900px it is one more
+   scrolling strip. Above, the shots share one line of the container with no scrolling: each
+   takes an equal part of the width, up to a cap, and its height follows from the ratio. */
+.strip--sheet { padding-top: 0; margin-top: 30px; }
+@media (min-width: 901px) {
+  .strip--sheet { overflow: visible; scroll-snap-type: none; padding: 0; margin: 34px 0 0; gap: 14px; }
+  .strip--sheet .strip__shot {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 200px;
+    width: auto;
+    height: auto;
+    aspect-ratio: var(--r);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4);
+  }
 }
-.strip--row .strip__shot { flex: 0 1 var(--shot-w); width: auto; height: auto; aspect-ratio: var(--r); box-shadow: 0 24px 48px -32px rgba(23, 22, 15, 0.4); }
 
 /* ----------------------------- App rows (home) ----------------------------- */
 .rows { border-top: 1px solid var(--line); }
-.row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
-  align-items: center;
-  padding: 44px 0;
-  border-bottom: 1px solid var(--line);
-}
+.row { padding: 44px 0; border-bottom: 1px solid var(--line); }
+/* Who the app is on the left, what it is made of and where to get it on the right. */
+.row__head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.row__meta > :first-child { margin-top: 0; }
 .row__id { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
 .row__icon { width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--line); object-fit: cover; }
 .row__name { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
@@ -255,7 +259,6 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
 .row__built span { color: var(--muted); }
 .row__built span::after { content: ':'; }
 .row__links { margin-top: 20px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-.row--single { grid-template-columns: 1fr; }
 
 /* ----------------------------- Web product tiles ----------------------------- */
 .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
@@ -505,8 +508,7 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
 
 /* ----------------------------- Responsive ----------------------------- */
 @media (max-width: 900px) {
-  .row { grid-template-columns: 1fr; gap: 28px; }
-  .strip--row { --shot-w: 180px; justify-content: flex-start; }
+  .row__head { grid-template-columns: 1fr; gap: 14px; }
   .founder--wide { grid-template-columns: 220px minmax(0, 1fr); gap: 36px; }
 }
 
