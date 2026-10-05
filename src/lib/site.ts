@@ -1,6 +1,9 @@
 // Facts about the studio that appear on more than one page. Change them here, not inline.
 export const site = {
   name: 'Krylabs',
+  /** The registered name, exactly as on the Udyam certificate. Meta business verification matches on it. */
+  legalName: 'Krylabs Research and Technologies',
+  udyam: 'UDYAM-TN-08-0147765',
   url: 'https://krylabs.com',
   tagline: 'Your iPhone app, from idea to App Store.',
   // Deliberately does not list the apps: the collections change, this string would not.
@@ -15,8 +18,12 @@ export const site = {
    */
   bookingUrl: null as string | null,
   timezone: 'Indian Standard Time (UTC+5:30)',
+  /** Where the studio works from, for marketing copy. The registered address is `address`. */
+  basedIn: 'Bengaluru',
   founder: {
     name: 'Krithick Santhosh',
+    /** As printed on PAN and Aadhaar, for the business details. */
+    legalName: 'Krithick Santhosh N',
     role: 'Founder and developer',
     education: 'IIT Kharagpur',
     /** Employers, most recent last, with what he worked on there. */
@@ -28,14 +35,18 @@ export const site = {
     github: 'https://github.com/Krythz43',
     x: 'https://x.com/krithick_n',
   },
+  /** The registered address on the Udyam certificate. */
   address: {
-    street: 'Palm 102, SJR Park Vista, Off Harlur Road',
-    city: 'Bengaluru',
-    region: 'Karnataka',
-    postalCode: '560102',
+    street: '2nd Floor, No. 34, Sakthi Nagar, Kundrathur, Kancheepuram',
+    city: 'Chennai',
+    region: 'Tamil Nadu',
+    postalCode: '600069',
     country: 'IN',
   },
 } as const;
+
+/** "2nd Floor, No. 34, Sakthi Nagar, Kundrathur, Kancheepuram, Chennai, Tamil Nadu 600069, India" */
+export const addressLine = `${site.address.street}, ${site.address.city}, ${site.address.region} ${site.address.postalCode}, India`;
 
 const list = new Intl.ListFormat('en', { type: 'conjunction' });
 
