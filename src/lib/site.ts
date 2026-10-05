@@ -22,8 +22,8 @@ export const site = {
   basedIn: 'Bengaluru',
   founder: {
     name: 'Krithick Santhosh',
-    /** As registered on the Udyam certificate, for the business details. */
-    legalName: 'Krithick Santhosh Nagaraj',
+    /** As printed on PAN and Aadhaar, for the business details. */
+    legalName: 'Krithick Santhosh N',
     role: 'Founder and developer',
     education: 'IIT Kharagpur',
     /** Employers, most recent last, with what he worked on there. */
