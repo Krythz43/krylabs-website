@@ -46,7 +46,7 @@
                     <p class="about-description">When you run AI Analysis, the reel's link, its description and your notes go to our server at reels.krylabs.com. Our server downloads the reel's public video, transcribes it, and sends the text to an AI provider, currently Groq, to generate the results.</p>
 
                     <h2 style="font-size: 28px; margin-top: 48px; margin-bottom: 20px;">Chat, summaries and script reports</h2>
-                    <p class="about-description">On iPhone, these go straight from your phone to Google's Gemini API and Groq, and they include the reel's title, description, transcript and your notes. On Android, Chat goes through our server to Groq, along with an anonymous device ID, a random identifier that isn't tied to who you are. Our server passes those messages along and doesn't save them.</p>
+                    <p class="about-description">These include the reel's title, description, transcript and your notes. On iPhone, version 3.1 and earlier send them straight from your phone to Google's Gemini API and Groq. On Android and later iPhone versions, they go through our server to an AI provider, currently Groq, along with an anonymous device ID, a random identifier that isn't tied to who you are. Our server passes those messages along and doesn't save them.</p>
 
                     <h2 style="font-size: 28px; margin-top: 48px; margin-bottom: 20px;">What our server keeps</h2>
                     <p class="about-description">Our server keeps the video, the reel's public details (its link, the creator's username, the caption and its like, view and comment counts), the transcript, the analysis and any script report, so the same reel isn't processed twice. Playing or saving a reel's video in the app fetches it from this copy. These records are stored by reel, with no account or device ID attached.</p>
@@ -55,7 +55,7 @@
                     <p class="about-description">Your notes help shape the analysis, so it can reflect what you wrote, and that analysis is reused when someone else analyzes the same reel. Please keep personal details out of your notes if you use AI Analysis.</p>
 
                     <h2 style="font-size: 28px; margin-top: 48px; margin-bottom: 20px;">Technical details</h2>
-                    <p class="about-description">Our server's logs record requests, including which reel links were asked for. For Android Chat they also hold a short piece of the device ID and the size of each request, but not your messages. These logs rotate automatically. Requests to our server pass through Cloudflare, which handles your IP address to deliver them.</p>
+                    <p class="about-description">Our server's logs record requests, including which reel links were asked for. For Chat through our server they also hold a short piece of the device ID and the size of each request, but not your messages. These logs rotate automatically. Requests to our server pass through Cloudflare, which handles your IP address to deliver them.</p>
 
                     <h2 style="font-size: 28px; margin-top: 48px; margin-bottom: 20px;">Purchases</h2>
                     <p class="about-description">ReelMark Premium is billed by Apple or Google. We never see your payment details.</p>

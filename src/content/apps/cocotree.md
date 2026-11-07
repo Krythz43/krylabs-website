@@ -22,4 +22,11 @@ sections:
         d: One recommendation you can act on, instead of another menu to read.
 statement:
   text: Menu anxiety is real. The fix is fewer choices, made well.
+legal:
+  - t: Privacy policy
+    d: Everything stays on your device.
+    href: /cocotree/privacy/
+  - t: Terms of service
+    d: The terms for using CocoTree.
+    href: /cocotree/terms/
 ---

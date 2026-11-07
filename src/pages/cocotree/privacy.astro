@@ -1,0 +1,36 @@
+---
+// CocoTree Privacy Policy. Written from the app's source (version 1.2, the App Store build).
+import Legal from '../../layouts/Legal.astro';
+import { site } from '../../lib/site';
+---
+<Legal
+  title="Privacy Policy"
+  updated="November 7, 2026"
+  description="CocoTree's privacy policy: everything stays on your device, with no account, analytics or ads."
+  eyebrow="CocoTree legal"
+  backHref="/cocotree/"
+  backLabel="Back to CocoTree"
+>
+  <p>CocoTree doesn't collect your data. There's no account, no analytics and no advertising, and we have no server that receives anything from the app.</p>
+
+  <h2>What stays on your device</h2>
+  <p>The mood and hunger level you pick, the city you choose from the list, and your Food Journal entries and their photos are stored only on your device. CocoTree doesn't use your device's location.</p>
+
+  <h2>Camera and photos</h2>
+  <p>CocoTree asks for camera and photo library access only so you can add photos to your Food Journal. Photos you choose to save go to your photo library.</p>
+
+  <h2>Food images</h2>
+  <p>Some food images are loaded from Pexels, an image service. As with any website, Pexels receives your IP address when your device requests an image. We don't send it anything else.</p>
+
+  <h2>Ordering food</h2>
+  <p>If you tap an ordering option, CocoTree opens Swiggy, Zomato or DoorDash. Those apps have their own privacy policies, and anything you do there is between you and them.</p>
+
+  <h2>Deleting your data</h2>
+  <p>Delete the app and the data it stored is deleted with it. Photos you saved to your photo library stay there until you delete them.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, we'll update the date at the top of this page.</p>
+
+  <h2>Contact</h2>
+  <p>CocoTree is made by {site.tradeName} ("Krylabs"), a sole proprietorship owned and operated by {site.founder.legalName}. Email <a href={`mailto:${site.email}`}>{site.email}</a> with any questions. Business details are on our <a href="/legal/contact/">contact page</a>.</p>
+</Legal>
