@@ -74,6 +74,7 @@ src/
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/
 │   ├── index.astro, about.astro, 404.astro
+│   ├── comet.astro        # Comet's public page: the service and who runs it (the product is behind a sign-in)
 │   ├── [app].astro        # /reelmark, /bubblenest, /blockbud, /cocotree, /oneatatime
 │   ├── writing/           # index + [slug]
 │   ├── og/[slug].png.ts   # build-time Open Graph images, one per page

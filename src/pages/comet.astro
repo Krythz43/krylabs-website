@@ -1,0 +1,106 @@
+---
+// Comet's public page. The product itself sits behind a sign-in at comet.krylabs.com, so this is
+// where a visitor, or a Meta reviewer, can see what the service is and who runs it.
+import { Image } from 'astro:assets';
+import { getEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Defs from '../components/Defs.astro';
+import { site, addressLine } from '../lib/site';
+import { organization } from '../lib/jsonld';
+
+const comet = await getEntry('products', 'comet');
+if (!comet) throw new Error('src/content/products/comet.md is missing');
+const d = comet.data;
+
+const appUrl = 'https://comet.krylabs.com';
+const privacyUrl = `${appUrl}/privacy.html`;
+
+const features = [
+  { t: 'You set the rules', d: 'Choose the posts and the keywords. When a comment matches, Comet acts. When it does not, Comet stays out of it.' },
+  { t: 'It replies and messages', d: 'Comet can reply to the comment and send the person who wrote it a direct message, through the official Instagram API.' },
+  { t: 'You see what happened', d: 'A dashboard shows each comment, what Comet did about it, and why anything failed.' },
+];
+
+const availability = [
+  { t: 'Invited accounts today', d: 'Comet is open to a small invited group. Each person signs in with their own Instagram account.' },
+  { t: 'A paid plan next', d: 'We plan to offer Comet as a paid subscription in India.' },
+];
+
+const data = [
+  { t: 'Your account, your view', d: "Your dashboard shows only your own account's activity." },
+  { t: 'What Comet uses', d: 'Account details, posts, comments and messages, to send those replies and show you the activity.' },
+  { t: 'Not for sale', d: 'We do not sell this data or pass it to third parties.' },
+  { t: 'Privacy policy', href: privacyUrl, d: 'What we collect, how long we keep it and how to ask us to delete it.' },
+];
+---
+
+<Base title={`${d.name}: ${d.tagline} | ${site.name}`} description={d.summary} jsonLd={organization()}>
+  <section class="page page--bare">
+    <div class="container">
+      <div class="page__id">
+        <Image class="page__icon" src={d.icon} alt="" width={128} height={128} loading="eager" />
+        <div>
+          <p class="page__name">{d.name}</p>
+          <p class="kicker">{d.tagline}</p>
+        </div>
+      </div>
+      <h1 class="display">Answer the comments you meant to answer.</h1>
+      <p class="lead page__lead">
+        Comet replies to comments on your Instagram posts and sends a direct message to the people who comment,
+        using rules you set. Conversations keep moving while you make the next thing.
+      </p>
+      <div class="page__actions">
+        <a href={appUrl} class="btn" data-e="comet-signin" target="_blank" rel="noopener">Sign in to Comet</a>
+        <a href={privacyUrl} class="btn btn--ghost" target="_blank" rel="noopener">Privacy policy</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">What Comet does</h2>
+      </div>
+      <Defs items={features} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Who can use it</h2>
+      </div>
+      <Defs items={availability} />
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Your data</h2>
+      </div>
+      <Defs items={data} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="display">Who runs Comet</h2>
+      </div>
+      <div class="prose">
+        <p>
+          Comet is built and run by <strong>{site.tradeName}</strong>, a sole proprietorship owned and operated by
+          <strong>{site.founder.legalName}</strong>.
+        </p>
+        <p>
+          <strong>Udyam Registration No.:</strong> {site.udyam}<br />
+          <strong>Based in:</strong> {site.basedIn}, India<br />
+          <strong>Registered address:</strong> {addressLine}<br />
+          <strong>Email:</strong> <a href={`mailto:${site.email}`} data-e="comet-email">{site.email}</a><br />
+          <strong>Phone:</strong> <a href={`tel:${site.phone.replace(/-/g, '')}`}>{site.phone}</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>
