@@ -27,8 +27,9 @@ export const site = {
    */
   bookingUrl: null as string | null,
   timezone: 'Indian Standard Time (UTC+5:30)',
-  /** Where the studio works from, for marketing copy. The registered address is `address`. */
+  /** Where the studio operates from. Say this everywhere except the registered address (`address`). */
   basedIn: 'Bengaluru',
+  basedInRegion: 'Karnataka',
   founder: {
     name: 'Krithick Santhosh',
     /** As printed on PAN and Aadhaar, and the legal name on the GST certificate. */
@@ -44,7 +45,7 @@ export const site = {
     github: 'https://github.com/Krythz43',
     x: 'https://x.com/krithick_n',
   },
-  /** The registered address on the Udyam certificate. */
+  /** The registered address on the Udyam and GST certificates. Always label it as registered. */
   address: {
     street: '2nd Floor, No. 34, Sakthi Nagar, Kundrathur, Kancheepuram',
     city: 'Chennai',
