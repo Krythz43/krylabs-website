@@ -36,6 +36,7 @@ export function organization() {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: site.name,
+    legalName: site.legalName,
     url: site.url,
     logo: absolute('/logo.png'),
     email: site.email,
