@@ -4,6 +4,11 @@ export const site = {
   /** The registered name, exactly as on the Udyam certificate. Meta business verification matches on it. */
   legalName: 'Krylabs Research and Technologies',
   udyam: 'UDYAM-TN-08-0147765',
+  /**
+   * Proves to Meta that this site belongs to the portfolio behind the Comet app. Meta re-checks
+   * it after verification, so removing the tag can un-verify the domain.
+   */
+  metaDomainVerification: 'h0h6jzhrdj44u34kx13odxncv9cj1a',
   url: 'https://krylabs.com',
   tagline: 'Your iPhone app, from idea to App Store.',
   // Deliberately does not list the apps: the collections change, this string would not.

@@ -69,7 +69,7 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="author" content={site.founder.name} />
-    <meta name="facebook-domain-verification" content="h0h6jzhrdj44u34kx13odxncv9cj1a" />
+    <meta name="facebook-domain-verification" content={site.metaDomainVerification} />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="preload" href={interRegular} as="font" type="font/woff2" crossorigin />
