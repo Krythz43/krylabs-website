@@ -45,7 +45,7 @@ export const site = {
   },
 } as const;
 
-/** "2nd Floor, No. 34, Sakthi Nagar, Kundrathur, Kancheepuram, Chennai, Tamil Nadu 600069, India" */
+/** The registered address on one line: "street, city, region postcode, India". */
 export const addressLine = `${site.address.street}, ${site.address.city}, ${site.address.region} ${site.address.postalCode}, India`;
 
 const list = new Intl.ListFormat('en', { type: 'conjunction' });

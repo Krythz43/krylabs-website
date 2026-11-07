@@ -1,9 +1,10 @@
 ---
 import Legal from '../../layouts/Legal.astro';
+import { site } from '../../lib/site';
 ---
-<Legal updated="August 2026" title="Cancellation & Refunds" description="Cancellation and refund policy for Krylabs paid digital products and subscriptions.">
+<Legal updated="November 2026" title="Cancellation & Refunds" description="Cancellation and refund policy for Krylabs paid digital products and subscriptions.">
 
-  <p>This policy applies to paid products, subscriptions and event reservations offered by Krylabs, owned and operated by Krithick Santhosh.</p>
+  <p>This policy applies to paid products, subscriptions and event reservations offered by {site.legalName} ("Krylabs"), a sole proprietorship owned and operated by {site.founder.legalName}.</p>
 
   <h2>Subscriptions purchased via the App Store</h2>
   <p>Subscriptions and in-app purchases made through Apple's App Store are managed by Apple. Cancellations and refunds for those purchases are handled under Apple's terms, through your Apple account settings.</p>

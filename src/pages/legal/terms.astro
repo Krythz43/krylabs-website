@@ -2,7 +2,7 @@
 import Legal from '../../layouts/Legal.astro';
 import { site, addressLine } from '../../lib/site';
 ---
-<Legal updated="October 2026" title="Terms & Conditions" description="Terms & Conditions for Krylabs websites, apps and digital products, operated by Krithick Santhosh.">
+<Legal updated="November 2026" title="Terms & Conditions" description={`Terms & Conditions for Krylabs websites, apps and digital products, operated by ${site.legalName}.`}>
 
   <p>These Terms &amp; Conditions govern your use of the websites, apps and digital products operated by {site.legalName} ("Krylabs", "we", "us"), a sole proprietorship owned and operated by {site.founder.legalName}, {addressLine}. By accessing or using our products, you agree to these terms.</p>
 
