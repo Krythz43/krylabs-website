@@ -1,7 +1,9 @@
 ---
 // BubbleNest Terms of Service — served at /terms (URL referenced from the apps and
-// store listings; never move it). Text is verbatim from the original static page.
+// store listings; never move it). Text is from the original static page, plus the operator,
+// contact details and governing law added in November 2026.
 import Legal from '../layouts/Legal.astro';
+import { site } from '../lib/site';
 ---
 <Legal
   title="Terms of Service"
@@ -12,7 +14,7 @@ import Legal from '../layouts/Legal.astro';
   backLabel="Back to BubbleNest"
 >
   <h2>1. Acceptance of Terms</h2>
-  <p>By accessing and using BubbleNest, you accept and agree to be bound by the terms and provision of this agreement.</p>
+  <p>By accessing and using BubbleNest, you accept and agree to be bound by the terms and provision of this agreement. BubbleNest is operated by {site.tradeName} ("Krylabs"), a sole proprietorship owned and operated by {site.founder.legalName}.</p>
 
   <h2>2. Description of Service</h2>
   <p>BubbleNest is a social networking platform that helps users find friends, connect with friends and discover compatible matches based on shared interests, preferences, and location. We provide tools for users to create profiles, create posts, discover events, find potential matches, and communicate with other users. Our events feature allows you to discover local events, connect with other attendees, and manage your event attendance.</p>
@@ -51,7 +53,7 @@ import Legal from '../layouts/Legal.astro';
   <p>We reserve the right to modify these terms at any time. We will notify users of significant changes through the app or via push notifications. Continued use of the service after changes constitutes acceptance of the new terms.</p>
 
   <h2>14. Contact Information</h2>
-  <p>If you have questions about these Terms of Service, please contact us through the app's support feature or at our official support channels.</p>
+  <p>If you have questions about these Terms of Service, please contact us through the app's support feature, at <a href={`mailto:${site.email}`}>{site.email}</a>, or through our <a href="/contact/">support page</a>. Business details are on the <a href="/legal/contact/">Krylabs contact page</a>.</p>
 
   <h2>15. Governing Law</h2>
   <p>These terms are governed by the laws of India. Any disputes are subject to the exclusive jurisdiction of the courts of Bengaluru, Karnataka.</p>
