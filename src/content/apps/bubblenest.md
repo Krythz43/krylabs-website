@@ -44,6 +44,9 @@ statement:
   text: Meeting people should not start with a photo grid. On BubbleNest it starts with "me too".
   sub: Post what you are up to and let a shared vibe do the introductions.
 legal:
+  - t: Contact and support
+    d: Answers to common questions, and how to reach us.
+    href: /contact/
   - t: Privacy policy
     d: What we collect, what we deliberately do not, and how deletion works.
     href: /privacy/
