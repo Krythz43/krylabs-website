@@ -42,7 +42,7 @@ statement:
   sub: Like bookmarking, but you keep the video and the thought that came with it.
 legal:
   - t: Privacy policy
-    d: What stays on your device, and what goes to our server.
+    d: What stays on your device, and what leaves it.
     href: /reelmark/privacypolicy/
   - t: Terms of service
     d: The terms for using ReelMark.
