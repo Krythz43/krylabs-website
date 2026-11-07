@@ -4,6 +4,8 @@ export const site = {
   /**
    * The trade name on the GST certificate and the enterprise name on Udyam. Meta business
    * verification matches on it. A proprietorship's legal name is the proprietor's: `founder.legalName`.
+   * The plain HTML legal pages in public/ can't read this file and spell both names out, so
+   * change them there too.
    */
   tradeName: 'Krylabs Research and Technologies',
   /** The GSTIN stays off the site on purpose: it contains the proprietor's PAN. */
