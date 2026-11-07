@@ -1,0 +1,42 @@
+---
+// CocoTree Terms of Service.
+import Legal from '../../layouts/Legal.astro';
+import { site } from '../../lib/site';
+---
+<Legal
+  title="Terms of Service"
+  updated="November 7, 2026"
+  description="The terms for using CocoTree, including what its food suggestions are and aren't."
+  eyebrow="CocoTree legal"
+  backHref="/cocotree/"
+  backLabel="Back to CocoTree"
+>
+  <p>These terms apply to the CocoTree app, made by {site.tradeName} ("Krylabs", "we"), a sole proprietorship owned and operated by {site.founder.legalName}. By using CocoTree, you agree to them.</p>
+
+  <h2>Using CocoTree</h2>
+  <p>You may use CocoTree for your own personal use. Don't copy, resell or reverse engineer the app, or use it for anything unlawful. Apple's standard terms for App Store apps also apply.</p>
+
+  <h2>Food suggestions</h2>
+  <p>CocoTree's suggestions are general ideas, not dietary, medical or nutritional advice. Check the ingredients for anything you're allergic to or need to avoid, and use your own judgment about what you eat.</p>
+
+  <h2>Other services</h2>
+  <p>Ordering options open Swiggy, Zomato or DoorDash. We don't run those services and aren't responsible for their availability, food, prices or delivery.</p>
+
+  <h2>Your content</h2>
+  <p>Your Food Journal entries and photos are yours. They stay on your device, so we can't recover them if you delete the app or lose your device.</p>
+
+  <h2>Ownership</h2>
+  <p>CocoTree, its design, code and content belong to Krylabs or its licensors, and are protected by intellectual property laws.</p>
+
+  <h2>No warranty</h2>
+  <p>CocoTree is provided "as is", without warranties of any kind. To the maximum extent the law permits, we aren't liable for indirect or consequential damages from using it.</p>
+
+  <h2>Changes</h2>
+  <p>We may update these terms. If we do, we'll change the date at the top of this page, and continuing to use the app means you accept them.</p>
+
+  <h2>Governing law</h2>
+  <p>These terms are governed by the laws of India. Any disputes are subject to the exclusive jurisdiction of the courts of Bengaluru, Karnataka, except where consumer protection law gives you the right to bring a claim elsewhere.</p>
+
+  <h2>Contact</h2>
+  <p>Email <a href={`mailto:${site.email}`}>{site.email}</a> with any questions. Business details are on our <a href="/legal/contact/">contact page</a>.</p>
+</Legal>
