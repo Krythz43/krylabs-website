@@ -1,12 +1,13 @@
 ---
 // BubbleNest Privacy Policy — served at /privacy (URL is referenced from several
-// pages and the app-store listings; never move it). Policy text is verbatim from
-// the original static page; only the presentation is the Astro redesign.
+// pages and the app-store listings; never move it). Policy text is from the original
+// static page, plus the operator and contact details added in November 2026.
 import Legal from '../layouts/Legal.astro';
+import { site } from '../lib/site';
 ---
 <Legal
   title="Privacy Policy"
-  updated="December 18, 2025"
+  updated="November 7, 2026"
   description="BubbleNest's privacy policy: what we collect, what we deliberately don't (location, email), ephemeral photos, and full deletion."
   eyebrow="BubbleNest legal"
   backHref="/bubblenest/"
@@ -54,5 +55,6 @@ import Legal from '../layouts/Legal.astro';
   <p>We may update this Privacy Policy from time to time. We will notify you of significant changes through the app or via push notifications. Your continued use of the service after changes constitutes acceptance of the updated policy.</p>
 
   <h2>14. Contact Us</h2>
-  <p>If you have questions about this Privacy Policy or our data practices, please contact us through the app's support feature or at our official support channels. We are committed to addressing your privacy concerns promptly.</p>
+  <p>If you have questions about this Privacy Policy or our data practices, please contact us through the app's support feature, at <a href={`mailto:${site.email}`}>{site.email}</a>, or through our <a href="/contact/">support page</a>. We are committed to addressing your privacy concerns promptly.</p>
+  <p>BubbleNest is operated by {site.tradeName} ("Krylabs"), a sole proprietorship owned and operated by {site.founder.legalName}. Business details are on the <a href="/legal/contact/">Krylabs contact page</a>.</p>
 </Legal>
