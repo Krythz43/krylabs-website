@@ -36,13 +36,24 @@ export function organization() {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: site.name,
-    legalName: site.legalName,
+    legalName: site.founder.legalName,
+    alternateName: site.tradeName,
     url: site.url,
     logo: absolute('/logo.png'),
     email: site.email,
     telephone: site.phone,
     founder: { '@id': PERSON_ID },
     // No sameAs: the studio has no profiles of its own; the founder's are on the Person node.
+    // address is the registered one; location is where the studio actually operates from.
+    location: {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: site.basedIn,
+        addressRegion: site.basedInRegion,
+        addressCountry: site.address.country,
+      },
+    },
     address: {
       '@type': 'PostalAddress',
       streetAddress: site.address.street,
