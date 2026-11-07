@@ -116,7 +116,7 @@ const ldJson = (obj: object) => JSON.stringify(obj).replace(/</g, '\\u003c');
             {footerLinks.map((l) => <a href={l.href}>{l.label}</a>)}
           </nav>
           <p class="footer__meta">
-            &copy; 2026 <strong>{site.legalName}</strong>. Owned and operated by {site.founder.legalName}.<br />
+            &copy; 2026 <strong>{site.tradeName}</strong>. Owned and operated by {site.founder.legalName}.<br />
             {addressLine}
           </p>
         </div>

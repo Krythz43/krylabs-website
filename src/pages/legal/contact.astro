@@ -2,9 +2,9 @@
 import Legal from '../../layouts/Legal.astro';
 import { site, addressLine } from '../../lib/site';
 ---
-<Legal updated="November 2026" title="Contact" description={`Contact ${site.legalName}, a sole proprietorship owned and operated by ${site.founder.legalName}.`}>
+<Legal updated="November 2026" title="Contact" description={`Contact ${site.tradeName}, a sole proprietorship owned and operated by ${site.founder.legalName}.`}>
 
-  <p>Krylabs is the trading name of <strong>{site.legalName}</strong>, a sole proprietorship owned and operated by <strong>{site.founder.legalName}</strong>.</p>
+  <p>Krylabs is short for <strong>{site.tradeName}</strong>, the trade name of a sole proprietorship owned and operated by <strong>{site.founder.legalName}</strong>.</p>
 
   <h2>Get in touch</h2>
   <p>
@@ -15,7 +15,8 @@ import { site, addressLine } from '../../lib/site';
 
   <h2>Business details</h2>
   <p>
-    <strong>Legal name:</strong> {site.legalName}<br />
+    <strong>Trade name:</strong> {site.tradeName}<br />
+    <strong>Legal name:</strong> {site.founder.legalName}<br />
     <strong>Constitution:</strong> Sole proprietorship<br />
     <strong>Proprietor:</strong> {site.founder.legalName}<br />
     <strong>Udyam Registration No.:</strong> {site.udyam}<br />

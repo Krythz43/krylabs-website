@@ -1,8 +1,12 @@
 // Facts about the studio that appear on more than one page. Change them here, not inline.
 export const site = {
   name: 'Krylabs',
-  /** The registered name, exactly as on the Udyam certificate. Meta business verification matches on it. */
-  legalName: 'Krylabs Research and Technologies',
+  /**
+   * The trade name on the GST certificate and the enterprise name on Udyam. Meta business
+   * verification matches on it. A proprietorship's legal name is the proprietor's: `founder.legalName`.
+   */
+  tradeName: 'Krylabs Research and Technologies',
+  /** The GSTIN stays off the site on purpose: it contains the proprietor's PAN. */
   udyam: 'UDYAM-TN-08-0147765',
   /**
    * Proves to Meta that this site belongs to the portfolio behind the Comet app. Meta re-checks
@@ -27,7 +31,7 @@ export const site = {
   basedIn: 'Bengaluru',
   founder: {
     name: 'Krithick Santhosh',
-    /** As printed on PAN and Aadhaar, for the business details. */
+    /** As printed on PAN and Aadhaar, and the legal name on the GST certificate. */
     legalName: 'Krithick Santhosh N',
     role: 'Founder and developer',
     education: 'IIT Kharagpur',
