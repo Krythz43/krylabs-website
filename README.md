@@ -3,7 +3,7 @@
 The Krylabs studio site, [krylabs.com](https://krylabs.com). Astro 5, compiled to static HTML,
 served by Caddy on the droplet. No client-side framework; one short inline script on every page
 (the nav hairline and the click counts, see [Traffic](#traffic)), the brief form's script on the
-home page, the pay form's on `/pay/` (see [Payments](#payments)), and a short one on build notes
+home page, the pay form's bundled module on `/pay/` (see [Payments](#payments)), and a short one on build notes
 that highlights the current section in the margin.
 
 Split out of `MatchMyVibe-Backend` on 2026-08-02. History before that date lives in that repo.
@@ -185,7 +185,10 @@ email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
   `POST /pay/api/webhook` files Razorpay's own record of each payment against this page's
   orders, captures one the page never confirmed (the payer closed the tab), and ignores
   everything else on the account. `GET /pay/api/health` says whether it runs on live or test
-  keys. The limits and field rules both sides check are in `payments/rules.mjs`.
+  keys. An order never has a second payment captured, so a UPI request approved late, after the
+  payer switched to a card, is left for Razorpay to refund.
+- **`payments/rules.mjs`** holds the limits, the field rules and their messages. The service
+  and the page's script both import it, so they cannot disagree.
 - **The amount is the payer's**, because they are paying a total we already printed on an
   invoice. The invoice number rides along in the order's notes, so the Razorpay dashboard
   (Transactions → the payment → Notes) shows which invoice each payment settles.
