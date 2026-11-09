@@ -1,0 +1,23 @@
+[Unit]
+Description=krylabs.com invoice payments (Razorpay)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/krylabs-website/payments/server.mjs
+# RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, PORT, DATA_DIR. Root-only, never in git.
+EnvironmentFile=/etc/krylabs-pay.env
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+StateDirectory=krylabs-pay
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/krylabs-pay
+
+[Install]
+WantedBy=multi-user.target
