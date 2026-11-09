@@ -1,0 +1,236 @@
+---
+// Pay a Krylabs invoice through Razorpay. The page holds no secrets: it asks the payments
+// service (payments/server.mjs, behind /pay/api/) for an order, opens Razorpay's checkout
+// on it, and has the service confirm the result before it says "paid".
+//
+// A link can fill in the invoice and the amount: /pay/?invoice=KRY-2026-014&amount=45000
+import Base from '../layouts/Base.astro';
+import { site } from '../lib/site';
+import palette from '../lib/palette.json';
+---
+<Base
+  title={`Pay an invoice | ${site.name}`}
+  description={`Pay a ${site.name} invoice in rupees by UPI, card or netbanking, through Razorpay.`}
+>
+  <section class="page page--end">
+    <div class="container">
+      <p class="kicker hero__kicker">Payments</p>
+      <h1 class="display">Pay an invoice</h1>
+      <p class="lead page__lead">
+        Two things from the invoice, its number and its total. Razorpay takes it from there, by UPI, card or
+        netbanking.
+      </p>
+
+      {/* Hidden until the script below runs, since nothing here works without it. */}
+      <form class="brief pay" id="pay" hidden novalidate data-email={site.email} data-name={site.name} data-color={palette.accent}>
+        <label class="brief__field">
+          <span>Invoice number</span>
+          <input name="invoice" type="text" autocomplete="off" maxlength="40" required />
+        </label>
+        <label class="brief__field">
+          <span>Invoice total in ₹</span>
+          <input name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="15" required />
+        </label>
+        <label class="brief__field">
+          <span>Your name</span>
+          <input name="name" type="text" autocomplete="name" maxlength="80" required />
+        </label>
+        <label class="brief__field">
+          <span>Email, for the receipt</span>
+          <input name="email" type="email" autocomplete="email" maxlength="120" required />
+        </label>
+        <label class="brief__field">
+          <span>Phone, optional</span>
+          <input name="phone" type="tel" autocomplete="tel" maxlength="20" />
+        </label>
+        <div class="brief__actions">
+          <button type="submit" class="btn" data-e="pay-start">Pay</button>
+        </div>
+        <p class="brief__status small" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="pay__done" id="pay-done" hidden tabindex="-1">
+        <h2 class="display">Paid. Thank you.</h2>
+        <p class="lead">
+          <span data-amount></span> for invoice <span data-invoice></span>. Razorpay emails you a receipt.
+        </p>
+        <p class="small">Payment ID <code data-payment></code>. Quote it if you write to us about this payment.</p>
+      </div>
+
+      <noscript>
+        <p class="lead">
+          This page needs JavaScript to open Razorpay's checkout. Without it, write to
+          <a class="link" href={`mailto:${site.email}`}>{site.email}</a> for a payment link.
+        </p>
+      </noscript>
+
+      <div class="pay__fine small">
+        <p>
+          Razorpay handles the payment, so {site.name} never sees your card, UPI or bank details.
+          Refunds follow the <a class="link" href="/legal/refunds/">Cancellation &amp; Refunds</a> policy.
+        </p>
+        <p>
+          Paying from outside India, or more than ₹5,00,000 at once? Write to
+          <a class="link" href={`mailto:${site.email}`} data-e="pay-email">{site.email}</a> before you pay.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    // The pay form. It asks /pay/api/order for a Razorpay order, opens Razorpay's checkout on
+    // it, then has /pay/api/verify check the result with Razorpay before showing "Paid".
+    // checkout.js is fetched only when Pay is pressed, so visiting the page loads nothing
+    // from a third party.
+    (function () {
+      var form = document.getElementById('pay');
+      if (!form) return;
+      form.hidden = false;
+      var f = form.elements;
+      var status = form.querySelector('.brief__status');
+      var button = form.querySelector('button[type="submit"]');
+      var done = document.getElementById('pay-done');
+      var email = form.dataset.email;
+      var say = function (text) { status.textContent = text; };
+
+      // A link can carry the invoice and the amount, e.g. /pay/?invoice=KRY-2026-014&amount=45000
+      var q = new URLSearchParams(location.search);
+      if (q.get('invoice')) f.invoice.value = q.get('invoice').slice(0, 40);
+      if (q.get('amount')) f.amount.value = q.get('amount').slice(0, 15);
+
+      var inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      // "45,000", "₹45000" or "45000.50" in rupees → paise. Anything else is NaN.
+      var paise = function () {
+        var s = f.amount.value.replace(/[₹,\s]/g, '').replace(/^rs\.?/i, '');
+        return /^\d{1,7}(\.\d{1,2})?$/.test(s) ? Math.round(parseFloat(s) * 100) : NaN;
+      };
+      var label = function () {
+        var p = paise();
+        button.textContent = p >= 100 ? 'Pay ' + inr.format(p / 100) : 'Pay';
+      };
+      label();
+      form.addEventListener('input', function (e) {
+        e.target.removeAttribute('aria-invalid');
+        if (e.target === f.amount) label();
+      });
+
+      var flag = function (field, text) {
+        field.setAttribute('aria-invalid', 'true');
+        field.focus();
+        say(text);
+        return true;
+      };
+      var invalid = function () {
+        var p = paise();
+        return (
+          (!f.invoice.value.trim() && flag(f.invoice, 'Add the invoice number.')) ||
+          (!(p >= 100) && flag(f.amount, 'Enter the total on the invoice, like 45000.')) ||
+          (p > 50000000 && flag(f.amount, 'One payment can be up to ₹5,00,000. Write to ' + email + ' for more.')) ||
+          (f.name.value.trim().length < 2 && flag(f.name, 'Add your name.')) ||
+          (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.value.trim()) && flag(f.email, 'Check your email address.'))
+        );
+      };
+
+      var api = function (route, body) {
+        return fetch('/pay/api/' + route, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (b) { return { status: r.status, body: b }; });
+        });
+      };
+
+      var checkout = null;
+      var loadCheckout = function () {
+        checkout = checkout || new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          s.onload = function () { if (window.Razorpay) resolve(window.Razorpay); else reject(new Error('no Razorpay')); };
+          s.onerror = function () { checkout = null; s.remove(); reject(new Error('checkout.js failed')); };
+          document.head.appendChild(s);
+        });
+        return checkout;
+      };
+
+      var busy = function (on) {
+        button.disabled = on;
+        form.setAttribute('aria-busy', on ? 'true' : 'false');
+      };
+
+      var showDone = function (b) {
+        done.querySelector('[data-amount]').textContent = inr.format(b.amount / 100);
+        done.querySelector('[data-invoice]').textContent = b.invoice;
+        done.querySelector('[data-payment]').textContent = b.payment_id;
+        form.hidden = true;
+        done.hidden = false;
+        done.focus();
+        if (window.countClick) window.countClick('pay-done');
+      };
+
+      // After Razorpay takes the money the button stays disabled whatever happens, so a
+      // payment that could not be confirmed is never paid a second time by mistake.
+      var confirmPayment = function (r) {
+        say('Confirming the payment with Razorpay…');
+        var stuck = function (why) {
+          say(why + ' If money left your account, it is safe: write to ' + email + ' and quote payment ID ' + r.razorpay_payment_id + '.');
+        };
+        api('verify', r).then(function (res) {
+          if (res.status === 200) showDone(res.body);
+          else stuck(res.body.error || 'Could not confirm the payment yet.');
+        }, function () { stuck('Could not reach krylabs.com to confirm the payment.'); });
+      };
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (button.disabled || invalid()) return;
+        var details = {
+          invoice: f.invoice.value.trim(),
+          amount_paise: paise(),
+          name: f.name.value.trim(),
+          email: f.email.value.trim(),
+          phone: f.phone.value.replace(/[\s()-]/g, ''),
+        };
+        busy(true);
+        say('Starting the payment…');
+        Promise.all([api('order', details), loadCheckout()]).then(function (out) {
+          var res = out[0];
+          if (res.status !== 200) {
+            busy(false);
+            say(res.body.error || 'Payments are down for a moment. Try again shortly, or write to ' + email + '.');
+            return;
+          }
+          var order = res.body;
+          var rzp = new out[1]({
+            key: order.key_id,
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            name: form.dataset.name,
+            description: 'Invoice ' + details.invoice,
+            image: location.origin + '/logo.png',
+            prefill: { name: details.name, email: details.email, contact: details.phone },
+            notes: { invoice: details.invoice },
+            theme: { color: form.dataset.color },
+            handler: confirmPayment,
+            modal: {
+              ondismiss: function () {
+                busy(false);
+                say('The payment window was closed. If you did not finish paying, nothing was charged. Press Pay to try again.');
+              },
+            },
+          });
+          rzp.on('payment.failed', function (r) {
+            var why = r && r.error && r.error.description;
+            say((why ? why + ' ' : '') + 'Try again in the payment window, with the same or another method.');
+          });
+          say('');
+          rzp.open();
+        }, function () {
+          busy(false);
+          say('Could not reach the payment service. Check your connection and try again, or write to ' + email + '.');
+        });
+      });
+    })();
+  </script>
+</Base>

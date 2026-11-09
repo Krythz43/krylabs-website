@@ -466,6 +466,17 @@ button.btn { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
 .brief [aria-invalid='true'] { border-color: var(--accent); }
 .brief__actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .brief__status:empty { display: none; }
+/* The pay form (/pay/) wears the brief's fields; these are the pieces only it has. */
+.pay { margin-top: 40px; }
+.pay .btn:disabled { opacity: 0.55; cursor: progress; }
+.pay .btn:disabled:hover { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.pay__done { max-width: 720px; margin: 40px 0 48px; }
+.pay__done:focus { outline: none; }
+.pay__done .lead { margin-top: 14px; }
+.pay__done .small { margin-top: 10px; }
+.pay__done code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; color: var(--ink); }
+.pay__fine { max-width: 60ch; }
+.pay__fine > * + * { margin-top: 10px; }
 .contact__note { margin-top: 28px; }
 .contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
 .contact__label { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
