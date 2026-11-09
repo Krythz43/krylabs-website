@@ -120,14 +120,20 @@ import palette from '../lib/palette.json';
         say(text);
         return true;
       };
+      var phone = function () { return f.phone.value.replace(/[\s()-]/g, ''); };
+      // The same rules the payments service applies, so a payer hears about a mistake here,
+      // next to the field, instead of after a round trip.
       var invalid = function () {
         var p = paise();
+        var invoice = f.invoice.value.trim();
         return (
-          (!f.invoice.value.trim() && flag(f.invoice, 'Add the invoice number.')) ||
+          (!invoice && flag(f.invoice, 'Add the invoice number.')) ||
+          (!/^[A-Za-z0-9][A-Za-z0-9 #/._-]*$/.test(invoice) && flag(f.invoice, 'Check the invoice number: letters, numbers, spaces and - / . _ # only.')) ||
           (!(p >= 100) && flag(f.amount, 'Enter the total on the invoice, like 45000.')) ||
           (p > 50000000 && flag(f.amount, 'One payment can be up to ₹5,00,000. Write to ' + email + ' for more.')) ||
           (f.name.value.trim().length < 2 && flag(f.name, 'Add your name.')) ||
-          (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.value.trim()) && flag(f.email, 'Check your email address.'))
+          (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.value.trim()) && flag(f.email, 'Check your email address.')) ||
+          (phone() && !/^\+?\d{8,15}$/.test(phone()) && flag(f.phone, 'Check your phone number, or leave it empty.'))
         );
       };
 
@@ -189,48 +195,62 @@ import palette from '../lib/palette.json';
           amount_paise: paise(),
           name: f.name.value.trim(),
           email: f.email.value.trim(),
-          phone: f.phone.value.replace(/[\s()-]/g, ''),
+          phone: phone(),
         };
         busy(true);
         say('Starting the payment…');
-        Promise.all([api('order', details), loadCheckout()]).then(function (out) {
-          var res = out[0];
-          if (res.status !== 200) {
+        // Checkout first: if it cannot load (a blocker, a flaky connection), no order is made.
+        loadCheckout().then(function (Razorpay) {
+          return api('order', details).then(function (res) { startCheckout(Razorpay, res, details); }, function () {
             busy(false);
-            say(res.body.error || 'Payments are down for a moment. Try again shortly, or write to ' + email + '.');
-            return;
-          }
-          var order = res.body;
-          var rzp = new out[1]({
-            key: order.key_id,
-            order_id: order.id,
-            amount: order.amount,
-            currency: order.currency,
-            name: form.dataset.name,
-            description: 'Invoice ' + details.invoice,
-            image: location.origin + '/logo.png',
-            prefill: { name: details.name, email: details.email, contact: details.phone },
-            notes: { invoice: details.invoice },
-            theme: { color: form.dataset.color },
-            handler: confirmPayment,
-            modal: {
-              ondismiss: function () {
-                busy(false);
-                say('The payment window was closed. If you did not finish paying, nothing was charged. Press Pay to try again.');
-              },
-            },
+            say('Could not reach krylabs.com. Check your connection and try again, or write to ' + email + '.');
           });
-          rzp.on('payment.failed', function (r) {
-            var why = r && r.error && r.error.description;
-            say((why ? why + ' ' : '') + 'Try again in the payment window, with the same or another method.');
-          });
-          say('');
-          rzp.open();
         }, function () {
           busy(false);
-          say('Could not reach the payment service. Check your connection and try again, or write to ' + email + '.');
+          say("Razorpay's checkout did not load. If a content or tracker blocker is on, allow checkout.razorpay.com and try again, or write to " + email + '.');
+        }).catch(function () {
+          busy(false);
+          say('Something went wrong before the payment started. Nothing was charged. Try again, or write to ' + email + '.');
         });
       });
+
+      // Hands the order the service made to Razorpay's checkout, or says why there is none.
+      var startCheckout = function (Razorpay, res, details) {
+        if (res.status !== 200) {
+          busy(false);
+          var field = res.body.field && f[res.body.field];
+          var why = res.body.error || 'Payments are down for a moment. Try again shortly, or write to ' + email + '.';
+          if (field) flag(field, why);
+          else say(why);
+          return;
+        }
+        var order = res.body;
+        var rzp = new Razorpay({
+          key: order.key_id,
+          order_id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          name: form.dataset.name,
+          description: 'Invoice ' + details.invoice,
+          image: location.origin + '/logo.png',
+          prefill: { name: details.name, email: details.email, contact: details.phone },
+          notes: { invoice: details.invoice },
+          theme: { color: form.dataset.color },
+          handler: confirmPayment,
+          modal: {
+            ondismiss: function () {
+              busy(false);
+              say('The payment window was closed. If you did not finish paying, nothing was charged. Press Pay to try again.');
+            },
+          },
+        });
+        rzp.on('payment.failed', function (r) {
+          var why = r && r.error && r.error.description;
+          say((why ? why + ' ' : '') + 'Try again in the payment window, with the same or another method.');
+        });
+        say('');
+        rzp.open();
+      };
     })();
   </script>
 </Base>
