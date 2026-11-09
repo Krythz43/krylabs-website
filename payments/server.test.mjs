@@ -21,6 +21,7 @@ const sign = (payload, secret = KEY_SECRET) => crypto.createHmac('sha256', secre
 // ---- the stand-in for Razorpay: orders it was asked to create, payments it will report.
 const created = [];
 const payments = new Map();
+const captures = [];
 let failOrders = false;
 const fake = http.createServer(async (req, res) => {
   const chunks = [];
@@ -38,8 +39,16 @@ const fake = http.createServer(async (req, res) => {
     created.push(order);
     return send(200, order);
   }
-  const m = req.url.match(/^\/payments\/([^/]+)$/);
-  if (req.method === 'GET' && m && payments.has(m[1])) return send(200, payments.get(m[1]));
+  const m = req.url.match(/^\/payments\/([^/]+)(\/capture)?$/);
+  const payment = m && payments.get(m[1]);
+  if (req.method === 'GET' && payment && !m[2]) return send(200, payment);
+  if (req.method === 'POST' && payment && m[2]) {
+    const body = JSON.parse(Buffer.concat(chunks));
+    if (payment.status !== 'authorized' || body.amount !== payment.amount) return send(400, { error: { description: 'cannot capture' } });
+    captures.push(payment.id);
+    payment.status = 'captured';
+    return send(200, payment);
+  }
   return send(404, { error: { description: 'not found' } });
 });
 
@@ -140,6 +149,7 @@ test('turns away bad orders before Razorpay sees them', async () => {
     const r = await post('order', { ...good, ...c });
     assert.equal(r.status, 400, JSON.stringify(c));
     assert.ok(r.body.error);
+    assert.equal(r.body.field, Object.keys(c)[0].replace('amount_paise', 'amount'), JSON.stringify(c));
   }
   assert.equal((await post('order', 'null')).status, 400);
   assert.equal((await post('order', '{nope')).status, 400);
@@ -160,18 +170,37 @@ test('verifies a captured payment once, and refuses it a second time', async () 
   assert.equal((await post('verify', fields)).status, 409);
 });
 
-test('refuses a bad signature, an order it never created and missing fields', async () => {
-  const { order, paymentId } = await paidOrder();
+test('refuses a bad signature, an order it never created, and malformed or missing fields', async () => {
+  const { order, paymentId, signature } = await paidOrder();
+  const ledger = path.join(dataDir, 'invoice-payments.jsonl');
+  const size = fs.statSync(ledger).size;
+  for (const fields of [
+    { razorpay_order_id: 'order_x', razorpay_payment_id: paymentId, razorpay_signature: sign(`order_x|${paymentId}`) },
+    { razorpay_order_id: 'x'.repeat(15000), razorpay_payment_id: paymentId, razorpay_signature: signature },
+    { razorpay_order_id: order.id, razorpay_payment_id: 'pay_' + 'a'.repeat(5000), razorpay_signature: signature },
+    { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: 'not-hex' },
+    { razorpay_order_id: order.id },
+  ]) {
+    assert.equal((await post('verify', fields)).status, 400);
+  }
+  assert.equal(fs.statSync(ledger).size, size, 'nothing malformed or unknown reaches the ledger');
   assert.equal((await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: sign(`${order.id}|${paymentId}`, 'wrong') })).status, 400);
-  assert.equal((await post('verify', { razorpay_order_id: 'order_x', razorpay_payment_id: paymentId, razorpay_signature: sign(`order_x|${paymentId}`) })).status, 400);
-  assert.equal((await post('verify', { razorpay_order_id: order.id })).status, 400);
+});
+
+test('captures an authorized payment before calling it paid', async () => {
+  const { order, paymentId, signature } = await paidOrder({ status: 'authorized' });
+  const r = await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature });
+  assert.equal(r.status, 200);
+  assert.ok(captures.includes(paymentId));
+  assert.equal(payments.get(paymentId).status, 'captured');
 });
 
 test('does not call a payment complete when Razorpay disagrees, and lets it verify once it settles', async () => {
-  for (const wrong of [{ amount: 100 }, { status: 'failed' }, { currency: 'USD' }, { order_id: 'order_other' }]) {
+  for (const wrong of [{ amount: 100 }, { status: 'failed' }, { currency: 'USD' }, { order_id: 'order_other' }, { status: 'authorized', amount: 100 }]) {
     const { order, paymentId, signature } = await paidOrder(wrong);
     const r = await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature });
     assert.equal(r.status, 400, JSON.stringify(wrong));
+    assert.ok(!captures.includes(paymentId), 'a payment that does not match its order is never captured');
   }
   const { order, paymentId, signature } = await paidOrder({ status: 'created' });
   const fields = { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature };
@@ -189,12 +218,41 @@ test('says so when Razorpay cannot create the order', async () => {
   }
 });
 
-test('limits how often one visitor can start a payment', async () => {
+test('limits how often one visitor can start a payment, without counting typos', async () => {
   const me = { 'cf-connecting-ip': '192.0.2.7' };
+  for (let i = 0; i < 10; i++) assert.equal((await post('order', { ...good, email: 'typo' }, me)).status, 400);
   const statuses = [];
   for (let i = 0; i < 9; i++) statuses.push((await post('order', { ...good, amount_paise: 100 }, me)).status);
   assert.deepEqual(statuses.slice(0, 8), Array(8).fill(200));
   assert.equal(statuses[8], 429);
+  assert.equal((await post('order', good, { 'cf-connecting-ip': '192.0.2.8' })).status, 200, 'other visitors are unaffected');
+});
+
+test('counts an IPv6 visitor by its /64', async () => {
+  const from = (ip) => post('order', { ...good, amount_paise: 100 }, { 'cf-connecting-ip': ip });
+  for (let i = 1; i <= 8; i++) assert.equal((await from(`2001:db8:aa:1::${i.toString(16)}`)).status, 200);
+  assert.equal((await from('2001:0db8:00aa:0001:ffff::9')).status, 429);
+  assert.equal((await from('2001:db8:aa:2::1')).status, 200);
+});
+
+test('does not hand out an order it could not write down', async () => {
+  const ledger = path.join(dataDir, 'invoice-payments.jsonl');
+  fs.chmodSync(ledger, 0o444);
+  try {
+    assert.equal((await post('order', good)).status, 503);
+  } finally {
+    fs.chmodSync(ledger, 0o644);
+  }
+  assert.equal((await post('order', good)).status, 200);
+});
+
+test('survives a request URL it cannot parse', async () => {
+  const { port } = new URL(base);
+  const status = await new Promise((resolve, reject) => {
+    http.request({ host: '127.0.0.1', port, path: '//[', method: 'GET' }, (r) => (r.resume(), resolve(r.statusCode))).on('error', reject).end();
+  });
+  assert.equal(status, 500);
+  assert.equal((await fetch(`${base}/health`)).status, 200);
 });
 
 test('accepts only signed webhooks, and files only the ones about its own orders', async () => {

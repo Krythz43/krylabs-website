@@ -6,18 +6,19 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/node /opt/krylabs-website/payments/server.mjs
-# RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, PORT, DATA_DIR. Root-only, never in git.
+# RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET and PORT. Root-only, never in git.
 EnvironmentFile=/etc/krylabs-pay.env
 Restart=always
 RestartSec=3
 User=www-data
 Group=www-data
+# The ledger's home, /var/lib/krylabs-pay: the one place ProtectSystem leaves writable. The
+# server finds it through $STATE_DIRECTORY, so there is no second path to keep in step.
 StateDirectory=krylabs-pay
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/krylabs-pay
 
 [Install]
 WantedBy=multi-user.target

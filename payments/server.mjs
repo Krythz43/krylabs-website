@@ -16,16 +16,15 @@ const HOST = process.env.HOST || '127.0.0.1';
 const KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || '';
-const DATA_DIR = process.env.DATA_DIR || '/var/lib/krylabs-pay';
+// Under systemd the unit's StateDirectory wins, so the ledger is always somewhere the
+// sandbox lets it write. DATA_DIR is for running it anywhere else, such as the tests.
+const DATA_DIR = process.env.STATE_DIRECTORY || process.env.DATA_DIR || '/var/lib/krylabs-pay';
 // Only the tests change this, to point at a stand-in for Razorpay.
 const RZP = (process.env.RAZORPAY_API_BASE || 'https://api.razorpay.com/v1').replace(/\/+$/, '');
 
 const CURRENCY = 'INR';
 const MIN_PAISE = 100; // ₹1, Razorpay's own minimum
 const MAX_PAISE = 5_00_000_00; // ₹5,00,000 in one payment; larger invoices are split or paid by bank transfer
-// Razorpay refunds an authorized payment that is never captured, so the ledger keeps the
-// status and the dashboard is the place to check before treating "authorized" as money in.
-const SETTLED = ['captured', 'authorized'];
 
 if (!KEY_ID || !KEY_SECRET) {
   console.error('FATAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set.');
@@ -44,12 +43,16 @@ const LEDGER = path.join(DATA_DIR, 'invoice-payments.jsonl');
 // list, any valid (order, payment, signature) triple could be replayed against us.
 const orders = new Map(); // order_id -> { id, amount, invoice, paid }
 
+// Returns false when the line could not be written. An order is only handed to a payer once
+// it is on disk, since the ledger is how this service remembers its orders across a restart.
 function record(event, payload) {
   const line = JSON.stringify({ at: new Date().toISOString(), event, ...payload });
   try {
     fs.appendFileSync(LEDGER, line + '\n');
+    return true;
   } catch (err) {
     console.error('ledger write failed:', err.message);
+    return false;
   }
 }
 
@@ -131,27 +134,35 @@ async function rzp(route, init = {}) {
   return body;
 }
 
-// Order creation is open to anyone by nature, so it needs a ceiling or it becomes a free
-// way to spam Razorpay on this key: a few per visitor a minute, and a cap for everyone.
-const hits = new Map();
-let allHits = [];
-function rateLimited(ip, now = Date.now()) {
-  const recent = (t) => now - t < 60_000;
-  const mine = (hits.get(ip) || []).filter(recent);
-  allHits = allHits.filter(recent);
-  if (mine.length >= 8 || allHits.length >= 60) return true;
+// Both routes are open to anyone by nature, so each visitor gets a ceiling: on orders so the
+// key cannot be used to spam Razorpay, on confirmations so nobody can grind the ledger.
+// There is deliberately no cap across all visitors, which one attacker could fill for everyone.
+const hits = { order: new Map(), verify: new Map() };
+const LIMITS = { order: 8, verify: 20 }; // a minute
+function rateLimited(kind, visitor, now = Date.now()) {
+  const mine = (hits[kind].get(visitor) || []).filter((t) => now - t < 60_000);
+  if (mine.length >= LIMITS[kind]) return true;
   mine.push(now);
-  allHits.push(now);
-  hits.set(ip, mine);
+  hits[kind].set(visitor, mine);
   return false;
 }
-setInterval(() => hits.clear(), 10 * 60_000).unref();
+setInterval(() => Object.values(hits).forEach((m) => m.clear()), 10 * 60_000).unref();
 
-// Cloudflare names the visitor; everything else arrives from cloudflared on loopback.
-const clientIp = (req) =>
-  String(req.headers['cf-connecting-ip'] || '').trim() ||
-  String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-  req.socket.remoteAddress;
+// Cloudflare names the visitor; everything else arrives from cloudflared on loopback. An IPv6
+// address counts by its /64, the block one connection usually holds, so rotating addresses
+// inside it does not buy more attempts.
+function visitorOf(req) {
+  const ip =
+    String(req.headers['cf-connecting-ip'] || '').trim() ||
+    String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    String(req.socket.remoteAddress || '');
+  if (!ip.includes(':') || ip.startsWith('::ffff:')) return ip;
+  const [head, tail = ''] = ip.toLowerCase().split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = ip.includes('::') ? [...left, ...Array(8 - left.length - right.length).fill('0'), ...right] : left;
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
 
 const clean = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -161,8 +172,6 @@ const clean = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, m
 // The amount comes from the payer here on purpose: they are paying the total printed on an
 // invoice we sent. The invoice reference rides along so the payment can be matched to it.
 async function createOrder(req, res) {
-  if (rateLimited(clientIp(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
-
   let body;
   try {
     body = await readJson(req);
@@ -176,14 +185,18 @@ async function createOrder(req, res) {
   const phone = clean(body.phone, 20).replace(/[\s()-]/g, '');
   const amount = body.amount_paise;
 
+  // The page checks the same rules first; `field` lets it point at the one to fix.
   const problem =
-    (!/^[A-Za-z0-9][A-Za-z0-9 #/._-]*$/.test(invoice) && 'Check the invoice number: letters, numbers, spaces and - / . _ # only.') ||
-    ((!Number.isSafeInteger(amount) || amount < MIN_PAISE) && 'Enter the amount on your invoice, ₹1 or more.') ||
-    (amount > MAX_PAISE && 'One payment can be up to ₹5,00,000. For more, write to us for bank transfer details.') ||
-    (name.length < 2 && 'Add your name.') ||
-    (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && 'Check your email address.') ||
-    (phone && !/^\+?\d{8,15}$/.test(phone) && 'Check your phone number, or leave it empty.');
-  if (problem) return json(res, 400, { error: problem });
+    (!/^[A-Za-z0-9][A-Za-z0-9 #/._-]*$/.test(invoice) && ['invoice', 'Check the invoice number: letters, numbers, spaces and - / . _ # only.']) ||
+    ((!Number.isSafeInteger(amount) || amount < MIN_PAISE) && ['amount', 'Enter the total on your invoice, ₹1 or more.']) ||
+    (amount > MAX_PAISE && ['amount', 'One payment can be up to ₹5,00,000. Write to us for more.']) ||
+    (name.length < 2 && ['name', 'Add your name.']) ||
+    (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && ['email', 'Check your email address.']) ||
+    (phone && !/^\+?\d{8,15}$/.test(phone) && ['phone', 'Check your phone number, or leave it empty.']);
+  if (problem) return json(res, 400, { error: problem[1], field: problem[0] });
+
+  // Counted only once the form is valid, so fixing a typo never uses up a payer's attempts.
+  if (rateLimited('order', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
 
   const receipt = `krylabs_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
   try {
@@ -196,8 +209,10 @@ async function createOrder(req, res) {
         notes: { source: 'krylabs.com/pay', invoice, name, email, phone },
       }),
     });
+    if (!record('order.created', { order_id: order.id, receipt, amount: order.amount, invoice, name, email, phone })) {
+      return json(res, 503, { error: 'Payments are down for a moment. Please try again shortly.' });
+    }
     orders.set(order.id, { id: order.id, amount: order.amount, invoice, paid: false });
-    record('order.created', { order_id: order.id, receipt, amount: order.amount, invoice, name, email, phone });
     return json(res, 200, { id: order.id, amount: order.amount, currency: order.currency, key_id: KEY_ID });
   } catch (err) {
     console.error('order failed:', err.message);
@@ -208,24 +223,24 @@ async function createOrder(req, res) {
 
 // POST /pay/api/verify: the checkout's success callback, checked before the page says "paid".
 async function verify(req, res) {
+  if (rateLimited('verify', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
   let body;
   try {
     body = await readJson(req);
   } catch {
     return json(res, 400, { error: 'Bad request.' });
   }
+  // Shape-checked before anything is looked up or written, so the ledger only ever holds
+  // short, well-formed ids.
   const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = body;
-  if (typeof orderId !== 'string' || typeof paymentId !== 'string' || typeof signature !== 'string') {
+  if (!/^order_[A-Za-z0-9]{1,40}$/.test(orderId) || !/^pay_[A-Za-z0-9]{1,40}$/.test(paymentId) || !/^[a-f0-9]{64}$/.test(signature)) {
     return json(res, 400, { error: 'Missing payment details.' });
   }
 
   // The browser only names WHICH of our orders it means. An order we never created cannot
-  // verify, and one that already has cannot verify twice.
+  // verify (and is not worth a ledger line), and one that already has cannot verify twice.
   const known = orders.get(orderId);
-  if (!known) {
-    record('verify.unknown_order', { order_id: orderId, payment_id: paymentId });
-    return json(res, 400, { error: 'This payment is not one this page started.' });
-  }
+  if (!known) return json(res, 400, { error: 'This payment is not one this page started.' });
   if (known.paid) {
     record('verify.replay', { order_id: orderId, payment_id: paymentId });
     return json(res, 409, { error: 'This payment has already been confirmed.' });
@@ -240,14 +255,22 @@ async function verify(req, res) {
   known.paid = true;
 
   // The signature proves the ids belong together. It does not prove the money settled for
-  // the amount we asked, so ask Razorpay directly.
+  // the amount we asked, so ask Razorpay directly. Only a captured payment counts: Razorpay
+  // refunds an authorized one that is never captured, so one that matches this order is
+  // captured here rather than left to the account's auto-capture setting.
   try {
-    const payment = await rzp(`/payments/${encodeURIComponent(paymentId)}`);
-    const ok =
-      payment.order_id === known.id &&
-      payment.amount === known.amount &&
-      payment.currency === CURRENCY &&
-      SETTLED.includes(payment.status);
+    const route = `/payments/${encodeURIComponent(paymentId)}`;
+    const matches = (p) => p.order_id === known.id && p.amount === known.amount && p.currency === CURRENCY;
+    let payment = await rzp(route);
+    if (payment.status === 'authorized' && matches(payment)) {
+      try {
+        payment = await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: known.amount, currency: CURRENCY }) });
+      } catch (err) {
+        console.error('capture failed:', err.message); // usually auto-capture got there first
+        payment = await rzp(route);
+      }
+    }
+    const ok = matches(payment) && payment.status === 'captured';
     const facts = { order_id: known.id, payment_id: paymentId, invoice: known.invoice, status: payment.status, amount: payment.amount, method: payment.method };
     if (!ok) {
       known.paid = false;
@@ -302,8 +325,8 @@ async function webhook(req, res) {
 
 // ---------------------------------------------------------------- server
 const server = http.createServer(async (req, res) => {
-  const route = `${req.method} ${new URL(req.url, 'http://localhost').pathname}`;
   try {
+    const route = `${req.method} ${new URL(req.url, 'http://localhost').pathname}`;
     switch (route) {
       case 'GET /pay/api/health':
         return json(res, 200, { ok: true, mode: MODE, webhook: Boolean(WEBHOOK_SECRET) });
