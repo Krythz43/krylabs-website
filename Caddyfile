@@ -43,6 +43,13 @@
 		reverse_proxy 127.0.0.1:8080
 	}
 
+	# Invoice payments for /pay/ (payments/server.mjs, systemd unit krylabs-pay). Its own
+	# prefix under the page, because /api/* already belongs to the Go API above.
+	@pay path /pay/api/*
+	handle @pay {
+		reverse_proxy 127.0.0.1:3073
+	}
+
 	# The website itself. try_files reproduces Astro's `build.format: 'directory'` layout
 	# (/about -> /about/index.html) and the bare-filename links inside the mirrored
 	# blockbud/ and oneatatime/ sites.
