@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "start": "node server.js",
     "sync": "node scripts/sync-appstore.mjs",
-    "traffic": "node scripts/traffic.mjs"
+    "traffic": "node scripts/traffic.mjs",
+    "test": "node --test payments/server.test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",

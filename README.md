@@ -3,7 +3,8 @@
 The Krylabs studio site, [krylabs.com](https://krylabs.com). Astro 5, compiled to static HTML,
 served by Caddy on the droplet. No client-side framework; one short inline script on every page
 (the nav hairline and the click counts, see [Traffic](#traffic)), the brief form's script on the
-home page, and a short one on build notes that highlights the current section in the margin.
+home page, the pay form's bundled module on `/pay/` (see [Payments](#payments)), and a short one on build notes
+that highlights the current section in the margin.
 
 Split out of `MatchMyVibe-Backend` on 2026-08-02. History before that date lives in that repo.
 
@@ -17,6 +18,7 @@ npm run preview    # serve ./dist to sanity-check the build
 npm run sync       # refresh App Store data + screenshots (see below), then commit the result
 npm run traffic    # visits, pages and contact clicks from Caddy's access log (see Traffic)
 npm start          # zero-dependency production server → http://127.0.0.1:3070
+npm test           # the payments service, end to end against a stand-in for Razorpay
 ```
 
 ## Hosting
@@ -33,6 +35,8 @@ npm start          # zero-dependency production server → http://127.0.0.1:3070
 - Caddy loads `/etc/caddy/Caddyfile`, not this repo's copy, and that file also serves another
   site. After changing the `:3070` block here, copy the change into that file and run
   `systemctl restart caddy` (the admin endpoint is off, so `caddy reload` does not work).
+- The Caddy `@pay` matcher proxies `/pay/api/*` to the payments service on `127.0.0.1:3073`
+  (see [Payments](#payments)).
 - The laptop still runs `krylabs-website` under PM2 on `127.0.0.1:3070`, but nothing routes
   public traffic to it. Restarting it does **not** deploy.
 
@@ -43,7 +47,8 @@ git push                                                              # from whe
 ssh leadoven 'cd /opt/krylabs-website && git pull && npm ci && npm run build'
 ```
 
-`dist/` is gitignored, so the build runs on the droplet. Caddy serves the files directly, no
+`dist/` is gitignored, so the build runs on the droplet. A change under `payments/` also needs
+`systemctl restart krylabs-pay` there. Caddy serves the files directly, no
 service restart needed. The build needs no network: fonts, screenshots and store data are all
 committed. Every package is a `dependency` (none are dev-only) because all of them are needed
 to build, and a `NODE_ENV=production` install must not skip any.
@@ -74,6 +79,7 @@ src/
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/
 │   ├── index.astro, about.astro, 404.astro
+│   ├── pay.astro          # /pay/: pay an invoice through Razorpay (see Payments)
 │   ├── [app].astro        # /reelmark, /bubblenest, /blockbud, /cocotree, /oneatatime
 │   ├── writing/           # index + [slug]
 │   ├── og/[slug].png.ts   # build-time Open Graph images, one per page
@@ -86,6 +92,7 @@ scripts/traffic.mjs        # reads Caddy's access log: visits, pages, referrers,
 scripts/make-logo.mjs      # renders public/logo.png (the Organization logo in JSON-LD)
 public/                    # copied verbatim into dist/ (see below)
 server.js                  # zero-dependency static server (fallback; Caddy is the origin)
+payments/                  # the Razorpay service behind /pay/api/, its tests and its systemd unit
 ```
 
 ### Adding or changing an app
@@ -164,6 +171,38 @@ URLs are byte-identical to before:
 | `/oneatatime/privacy.html`, `/oneatatime/terms.html`, `/oneatatime/support.html` | One legal + support |
 | `/static/css/style.css`, `/static/js/app.js` | the stylesheet those pages load |
 
+## Payments
+
+`/pay/` is where a client pays an invoice: invoice number, total, name and email, then
+Razorpay's checkout (UPI, cards, netbanking). A link can fill in the first two, so an invoice
+email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
+
+- **`payments/server.mjs`** holds the Razorpay key secret, which a static site cannot. Zero
+  dependencies, like `server.js`. It creates the order (`POST /pay/api/order`), and before the
+  page says "Paid" it checks the checkout's signature against an order it created itself, refuses
+  a second confirmation of the same order, and asks Razorpay that the payment was captured for
+  the right amount, capturing it itself if it is only authorized (`POST /pay/api/verify`).
+  `POST /pay/api/webhook` files Razorpay's own record of each payment against this page's
+  orders, captures one the page never confirmed (the payer closed the tab), and ignores
+  everything else on the account. `GET /pay/api/health` says whether it runs on live or test
+  keys. An order never has a second payment captured, so a UPI request approved late, after the
+  payer switched to a card, is left for Razorpay to refund.
+- **`payments/rules.mjs`** holds the limits, the field rules and their messages. The service
+  and the page's script both import it, so they cannot disagree.
+- **The amount is the payer's**, because they are paying a total we already printed on an
+  invoice. The invoice number rides along in the order's notes, so the Razorpay dashboard
+  (Transactions → the payment → Notes) shows which invoice each payment settles.
+- **The ledger** is `invoice-payments.jsonl` in the service's state directory: every order,
+  confirmation and webhook, one JSON line each. It is also how the service remembers its orders
+  across a restart.
+- **On the droplet** it runs as the systemd unit in `payments/krylabs-pay.service`, reading its
+  keys from a root-only environment file that is never in git. Copy the unit to
+  `/etc/systemd/system/` when it changes, then `systemctl daemon-reload`.
+- **Checkout.js** is only fetched when Pay is pressed, so a visit to `/pay/` loads nothing from a
+  third party (see `/legal/privacy/`).
+- One payment is capped at ₹5,00,000 and INR only; the page sends anything else to email.
+- Each visitor (an IPv6 one by its /64) can start 8 payments and send 20 confirmations a minute.
+
 ## Traffic
 
 There is no analytics service and no cookie. Caddy already writes every request to
@@ -206,6 +245,8 @@ ssh leadoven 'cat /var/log/caddy/krylabs-website.log' | npm run --silent traffic
 
 ## Note on this being a public repo
 
-There are no secrets here and none should ever be added. The Google client ID in
+There are no secrets here and none should ever be added. The Razorpay key **id** that `/pay/`
+hands to the browser is public by design; the key secret lives only in the payments service's
+environment on the droplet. The Google client ID in
 `public/bubblenest/delete-account/index.html` is an OAuth **Web client ID**, which is public by
 design; the matching client *secret* lives only in the backend's environment.

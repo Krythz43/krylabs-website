@@ -1,0 +1,267 @@
+---
+// Pay a Krylabs invoice through Razorpay. The page holds no secrets: it asks the payments
+// service (payments/server.mjs, behind /pay/api/) for an order, opens Razorpay's checkout
+// on it, and has the service confirm the result before it says "paid".
+//
+// A link can fill in the invoice and the amount: /pay/?invoice=KRY-2026-014&amount=45000
+import Base from '../layouts/Base.astro';
+import { site } from '../lib/site';
+import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
+---
+<Base
+  title={`Pay an invoice | ${site.name}`}
+  description={`Pay a ${site.name} invoice in rupees by UPI, card or netbanking, through Razorpay.`}
+>
+  <section class="page page--end">
+    <div class="container">
+      <p class="kicker hero__kicker">Payments</p>
+      <h1 class="display">Pay an invoice</h1>
+      <p class="lead page__lead">
+        Two things from the invoice, its number and its total. Razorpay takes it from there, by UPI, card or
+        netbanking.
+      </p>
+
+      {/* Hidden until the script below runs, since nothing here works without it. */}
+      <form class="brief pay" id="pay" hidden novalidate>
+        <label class="brief__field">
+          <span>Invoice number</span>
+          <input name="invoice" type="text" autocomplete="off" maxlength={MAX_LENGTH.invoice} required />
+        </label>
+        <label class="brief__field">
+          <span>Invoice total in ₹</span>
+          <input name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="20" required />
+        </label>
+        <label class="brief__field">
+          <span>Your name</span>
+          <input name="name" type="text" autocomplete="name" maxlength={MAX_LENGTH.name} required />
+        </label>
+        <label class="brief__field">
+          <span>Email, for the receipt</span>
+          <input name="email" type="email" autocomplete="email" maxlength={MAX_LENGTH.email} required />
+        </label>
+        <label class="brief__field">
+          <span>Phone, optional</span>
+          <input name="phone" type="tel" autocomplete="tel" maxlength={MAX_LENGTH.phone} />
+        </label>
+        <div class="brief__actions">
+          <button type="submit" class="btn" data-e="pay-start">Pay</button>
+        </div>
+        <p class="brief__status small" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="pay__done" id="pay-done" hidden tabindex="-1">
+        <h2 class="display">Paid. Thank you.</h2>
+        <p class="lead">
+          <span data-amount></span> for invoice <span data-invoice></span>. Razorpay emails you a receipt.
+        </p>
+        <p class="small">Payment ID <code data-payment></code>. Quote it if you write to us about this payment.</p>
+      </div>
+
+      <noscript>
+        <p class="lead">
+          This page needs JavaScript to open Razorpay's checkout. Without it, write to
+          <a class="link" href={`mailto:${site.email}`}>{site.email}</a> for a payment link.
+        </p>
+      </noscript>
+
+      <div class="pay__fine small">
+        <p>
+          Razorpay handles the payment, so {site.name} never sees your card, UPI or bank details.
+          Refunds follow the <a class="link" href="/legal/refunds/">Cancellation &amp; Refunds</a> policy.
+        </p>
+        <p>
+          Paying from outside India, or more than {rupees(MAX_PAISE)} at once? Write to
+          <a class="link" href={`mailto:${site.email}`} data-e="pay-email">{site.email}</a> before you pay.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // The pay form. It asks /pay/api/order for a Razorpay order, opens Razorpay's checkout on
+    // it, then has /pay/api/verify check the result with Razorpay before showing "Paid".
+    // checkout.js is fetched only when Pay is pressed, so visiting the page loads nothing
+    // from a third party. The checks and their wording come from payments/rules.mjs, the
+    // module the payments service itself uses.
+    import { MIN_PAISE, parseRupees, problemWith, rupees, tidy } from '../../payments/rules.mjs';
+    import { site } from '../lib/site';
+    import palette from '../lib/palette.json';
+
+    type Order = { id: string; amount: number; currency: string; key_id: string };
+    type Answer = { status: number; body: Record<string, any> };
+    type Success = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
+    type Fields = 'invoice' | 'amount' | 'name' | 'email' | 'phone';
+
+    const form = document.getElementById('pay') as HTMLFormElement | null;
+    if (form) {
+      form.hidden = false;
+      const field = (name: Fields) => form.elements.namedItem(name) as HTMLInputElement;
+      const status = form.querySelector('.brief__status') as HTMLElement;
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const done = document.getElementById('pay-done') as HTMLElement;
+      const email = site.email;
+      const say = (text: string) => (status.textContent = text);
+
+      // A link can carry the invoice and the amount, e.g. /pay/?invoice=KRY-2026-014&amount=45000
+      const q = new URLSearchParams(location.search);
+      for (const name of ['invoice', 'amount'] as const) {
+        const value = q.get(name);
+        if (value) field(name).value = value.slice(0, field(name).maxLength);
+      }
+
+      const details = () => tidy({ ...Object.fromEntries(new FormData(form)), amount_paise: parseRupees(field('amount').value) });
+      const label = () => {
+        const paise = parseRupees(field('amount').value);
+        button.textContent = paise >= MIN_PAISE ? `Pay ${rupees(paise)}` : 'Pay';
+      };
+      label();
+
+      const flag = (name: Fields, text: string) => {
+        const input = field(name);
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+        say(text);
+      };
+
+      const api = (route: string, body: object): Promise<Answer> =>
+        fetch(`/pay/api/${route}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then((r) => r.json().catch(() => ({})).then((b) => ({ status: r.status, body: b })));
+
+      // Loaded once, on the first press of Pay. A failed load is forgotten so the next press
+      // tries again, for instance after the payer allows the domain in a blocker.
+      let checkout: Promise<any> | null = null;
+      const loadCheckout = () =>
+        (checkout ??= new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          const fail = () => {
+            checkout = null;
+            s.remove();
+            reject(new Error('checkout.js did not load'));
+          };
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          s.onload = () => ((window as any).Razorpay ? resolve((window as any).Razorpay) : fail());
+          s.onerror = fail;
+          document.head.appendChild(s);
+        }));
+
+      const busy = (on: boolean) => {
+        button.disabled = on;
+        form.setAttribute('aria-busy', String(on));
+      };
+
+      // The order made for the details on screen. If the payer closes the checkout and presses
+      // Pay again without changing anything, the same order opens again: a payment they already
+      // approved in a UPI app then makes Razorpay refuse a second one, instead of charging twice.
+      let current: { key: string; order: Order } | null = null;
+
+      const showDone = (amount: number, invoice: string, paymentId: string) => {
+        (done.querySelector('[data-amount]') as HTMLElement).textContent = rupees(amount);
+        (done.querySelector('[data-invoice]') as HTMLElement).textContent = invoice;
+        (done.querySelector('[data-payment]') as HTMLElement).textContent = paymentId;
+        form.hidden = true;
+        done.hidden = false;
+        done.focus();
+        (window as any).countClick?.('pay-done');
+      };
+
+      // After Razorpay takes the money the button stays disabled whatever happens, so a payment
+      // that could not be confirmed is never paid a second time by mistake. A confirmation that
+      // is not settled yet (Razorpay still processing, a dropped connection) is tried again.
+      const confirmPayment = (r: Success, amount: number, invoice: string, attempt = 0) => {
+        say(attempt ? 'Still confirming the payment with Razorpay…' : 'Confirming the payment with Razorpay…');
+        const stuck = (why: string) =>
+          say(`${why} If money left your account, it is safe: write to ${email} and quote payment ID ${r.razorpay_payment_id}.`);
+        const again = (why: string) => {
+          if (attempt >= 4) return stuck(why);
+          setTimeout(() => confirmPayment(r, amount, invoice, attempt + 1), 2000 * 2 ** attempt);
+        };
+        api('verify', r).then(
+          (res) => {
+            // 409: an earlier try got through even though its answer did not.
+            if (res.status === 200 || res.status === 409) {
+              current = null;
+              showDone(amount, invoice, r.razorpay_payment_id);
+            } else if (res.status >= 500 || res.status === 429) {
+              again(res.body.error || 'Could not confirm the payment yet.');
+            } else {
+              stuck(res.body.error || 'Could not confirm the payment.');
+            }
+          },
+          () => again('Could not reach krylabs.com to confirm the payment.'),
+        );
+      };
+
+      const openCheckout = (Razorpay: any, order: Order, d: ReturnType<typeof tidy>) => {
+        const rzp = new Razorpay({
+          key: order.key_id,
+          order_id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          name: site.name,
+          description: `Invoice ${d.invoice}`,
+          image: `${location.origin}/logo.png`,
+          prefill: { name: d.name, email: d.email, contact: d.phone },
+          notes: { invoice: d.invoice },
+          theme: { color: palette.accent },
+          handler: (r: Success) => confirmPayment(r, order.amount, d.invoice),
+          modal: {
+            ondismiss: () => {
+              busy(false);
+              say('The payment window was closed. If you approved the payment in your UPI or bank app, it can take a minute to arrive, so do not pay again. Otherwise, press Pay to try again.');
+            },
+          },
+        });
+        rzp.on('payment.failed', (r: any) => {
+          const why = r?.error?.description;
+          say(`${why ? why + ' ' : ''}Try again in the payment window, with the same or another method.`);
+        });
+        say('');
+        rzp.open();
+      };
+
+      form.addEventListener('input', (e) => {
+        const input = e.target as HTMLInputElement;
+        input.removeAttribute('aria-invalid');
+        if (input.name === 'amount') label();
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (button.disabled) return;
+        const d = details();
+        const problem = problemWith(d);
+        if (problem) return flag(problem[0] as Fields, problem[1].replace('Write to us', `Write to ${email}`));
+
+        const key = JSON.stringify(d);
+        busy(true);
+        say('Starting the payment…');
+        // Checkout first: if it cannot load (a blocker, a flaky connection), no order is made.
+        let Razorpay;
+        try {
+          Razorpay = await loadCheckout();
+        } catch {
+          busy(false);
+          return say(`Razorpay's checkout did not load. If a content or tracker blocker is on, allow checkout.razorpay.com and try again, or write to ${email}.`);
+        }
+        try {
+          if (current?.key !== key) {
+            const res = await api('order', d);
+            if (res.status !== 200) {
+              busy(false);
+              const why = res.body.error || `Payments are down for a moment. Try again shortly, or write to ${email}.`;
+              return res.body.field ? flag(res.body.field, why) : say(why);
+            }
+            current = { key, order: res.body as Order };
+          }
+          openCheckout(Razorpay, current.order, d);
+        } catch {
+          busy(false);
+          say(`Could not start the payment. Nothing was charged. Check your connection and try again, or write to ${email}.`);
+        }
+      });
+    }
+  </script>
+</Base>
