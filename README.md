@@ -180,10 +180,12 @@ email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
 - **`payments/server.mjs`** holds the Razorpay key secret, which a static site cannot. Zero
   dependencies, like `server.js`. It creates the order (`POST /pay/api/order`), and before the
   page says "Paid" it checks the checkout's signature against an order it created itself, refuses
-  a second confirmation of the same order, and asks Razorpay that the payment settled for the
-  right amount (`POST /pay/api/verify`). `POST /pay/api/webhook` files Razorpay's own record of
-  each payment against this page's orders and ignores everything else on the account.
-  `GET /pay/api/health` says whether it runs on live or test keys.
+  a second confirmation of the same order, and asks Razorpay that the payment was captured for
+  the right amount, capturing it itself if it is only authorized (`POST /pay/api/verify`).
+  `POST /pay/api/webhook` files Razorpay's own record of each payment against this page's
+  orders, captures one the page never confirmed (the payer closed the tab), and ignores
+  everything else on the account. `GET /pay/api/health` says whether it runs on live or test
+  keys. The limits and field rules both sides check are in `payments/rules.mjs`.
 - **The amount is the payer's**, because they are paying a total we already printed on an
   invoice. The invoice number rides along in the order's notes, so the Razorpay dashboard
   (Transactions → the payment → Notes) shows which invoice each payment settles.
@@ -196,6 +198,7 @@ email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
 - **Checkout.js** is only fetched when Pay is pressed, so a visit to `/pay/` loads nothing from a
   third party (see `/legal/privacy/`).
 - One payment is capped at ₹5,00,000 and INR only; the page sends anything else to email.
+- Each visitor (an IPv6 one by its /64) can start 8 payments and send 20 confirmations a minute.
 
 ## Traffic
 

@@ -187,6 +187,14 @@ test('refuses a bad signature, an order it never created, and malformed or missi
   assert.equal((await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: sign(`${order.id}|${paymentId}`, 'wrong') })).status, 400);
 });
 
+test('tells a confirmation that overlaps another to try again, rather than calling it confirmed', async () => {
+  const { order, paymentId, signature } = await paidOrder();
+  const fields = { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature };
+  const [a, b] = await Promise.all([post('verify', fields), post('verify', fields)]);
+  assert.deepEqual([a.status, b.status].sort(), [200, 503]);
+  assert.equal((await post('verify', fields)).status, 409);
+});
+
 test('captures an authorized payment before calling it paid', async () => {
   const { order, paymentId, signature } = await paidOrder({ status: 'authorized' });
   const r = await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature });
@@ -269,6 +277,29 @@ test('accepts only signed webhooks, and files only the ones about its own orders
   const ledger = fs.readFileSync(path.join(dataDir, 'invoice-payments.jsonl'), 'utf8');
   assert.match(ledger, /"event":"webhook".*"payment_id":"pay_hook".*"invoice":"KRY-2026-014"/);
   assert.doesNotMatch(ledger, /pay_elsewhere|sub_1/);
+});
+
+test('captures an authorized payment from the webhook alone, when the page never confirms it', async () => {
+  const hook = (evt) =>
+    fetch(`${base}/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': sign(evt, WEBHOOK_SECRET) }, body: evt }).then((r) => r.status);
+  const authorized = async (overrides = {}) => {
+    const { order, paymentId } = await paidOrder({ status: 'authorized', ...overrides });
+    const entity = { ...payments.get(paymentId) };
+    assert.equal(await hook(JSON.stringify({ event: 'payment.authorized', payload: { payment: { entity } } })), 200);
+    await new Promise((r) => setTimeout(r, 200)); // the capture runs after the reply
+    return { order, paymentId };
+  };
+  const good = await authorized();
+  assert.ok(captures.includes(good.paymentId));
+  assert.match(fs.readFileSync(path.join(dataDir, 'invoice-payments.jsonl'), 'utf8'), new RegExp(`"event":"webhook.capture","payment_id":"${good.paymentId}".*"status":"captured"`));
+  const short = await authorized({ amount: 100 });
+  assert.ok(!captures.includes(short.paymentId), 'a payment for the wrong amount is left alone');
+});
+
+test('answers an oversized body with 413, not a dropped connection', async () => {
+  const r = await post('order', JSON.stringify({ ...good, name: 'x'.repeat(40_000) }));
+  assert.equal(r.status, 413);
+  assert.equal((await fetch(`${base}/health`)).status, 200);
 });
 
 test('unknown routes are 404s', async () => {

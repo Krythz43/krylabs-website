@@ -10,6 +10,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { CURRENCY, MIN_PAISE, MAX_PAISE, MAX_LENGTH, INVOICE, EMAIL, PHONE, rupees } from './rules.mjs';
 
 const PORT = Number(process.env.PORT) || 3073;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -21,10 +22,6 @@ const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || '';
 const DATA_DIR = process.env.STATE_DIRECTORY || process.env.DATA_DIR || '/var/lib/krylabs-pay';
 // Only the tests change this, to point at a stand-in for Razorpay.
 const RZP = (process.env.RAZORPAY_API_BASE || 'https://api.razorpay.com/v1').replace(/\/+$/, '');
-
-const CURRENCY = 'INR';
-const MIN_PAISE = 100; // ₹1, Razorpay's own minimum
-const MAX_PAISE = 5_00_000_00; // ₹5,00,000 in one payment; larger invoices are split or paid by bank transfer
 
 if (!KEY_ID || !KEY_SECRET) {
   console.error('FATAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set.');
@@ -85,23 +82,28 @@ function json(res, status, body) {
   res.end(buf);
 }
 
+// Past the limit the rest of the body is read and dropped rather than the socket torn down, so
+// the sender still gets its 413 instead of a connection reset.
 function readBody(req, limit = 16 * 1024) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let over = false;
     req.on('data', (c) => {
+      if (over) return;
       size += c.length;
-      if (size > limit) {
-        reject(new Error('body too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(c);
+      if (size <= limit) return chunks.push(c);
+      over = true;
+      chunks.length = 0;
+      reject(Object.assign(new Error('body too large'), { tooLarge: true }));
     });
-    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('end', () => over || resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
+
+const badBody = (res, err) =>
+  err?.tooLarge ? json(res, 413, { error: 'Too large.' }) : json(res, 400, { error: 'Bad request.' });
 
 // JSON that parses to null, a number or a string is still a bad body.
 async function readJson(req) {
@@ -148,7 +150,9 @@ function rateLimited(kind, visitor, now = Date.now()) {
 }
 setInterval(() => Object.values(hits).forEach((m) => m.clear()), 10 * 60_000).unref();
 
-// Cloudflare names the visitor; everything else arrives from cloudflared on loopback. An IPv6
+// Cloudflare names the visitor; everything else arrives from cloudflared on loopback. The header
+// can be trusted because the origin is reachable only through the tunnel (the droplet's
+// firewall admits SSH alone), so no one can send it straight to Caddy. An IPv6
 // address counts by its /64, the block one connection usually holds, so rotating addresses
 // inside it does not buy more attempts.
 function visitorOf(req) {
@@ -175,24 +179,24 @@ async function createOrder(req, res) {
   let body;
   try {
     body = await readJson(req);
-  } catch {
-    return json(res, 400, { error: 'Bad request.' });
+  } catch (err) {
+    return badBody(res, err);
   }
 
-  const invoice = clean(body.invoice, 40);
-  const name = clean(body.name, 80);
-  const email = clean(body.email, 120);
-  const phone = clean(body.phone, 20).replace(/[\s()-]/g, '');
+  const invoice = clean(body.invoice, MAX_LENGTH.invoice);
+  const name = clean(body.name, MAX_LENGTH.name);
+  const email = clean(body.email, MAX_LENGTH.email);
+  const phone = clean(body.phone, MAX_LENGTH.phone).replace(/[\s()-]/g, '');
   const amount = body.amount_paise;
 
-  // The page checks the same rules first; `field` lets it point at the one to fix.
+  // The page checks the same rules (payments/rules.mjs) first; `field` lets it point at the one to fix.
   const problem =
-    (!/^[A-Za-z0-9][A-Za-z0-9 #/._-]*$/.test(invoice) && ['invoice', 'Check the invoice number: letters, numbers, spaces and - / . _ # only.']) ||
-    ((!Number.isSafeInteger(amount) || amount < MIN_PAISE) && ['amount', 'Enter the total on your invoice, ₹1 or more.']) ||
-    (amount > MAX_PAISE && ['amount', 'One payment can be up to ₹5,00,000. Write to us for more.']) ||
+    (!INVOICE.test(invoice) && ['invoice', 'Check the invoice number: letters, numbers, spaces and - / . _ # only.']) ||
+    ((!Number.isSafeInteger(amount) || amount < MIN_PAISE) && ['amount', `Enter the total on your invoice, ${rupees(MIN_PAISE)} or more.`]) ||
+    (amount > MAX_PAISE && ['amount', `One payment can be up to ${rupees(MAX_PAISE)}. Write to us for more.`]) ||
     (name.length < 2 && ['name', 'Add your name.']) ||
-    (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && ['email', 'Check your email address.']) ||
-    (phone && !/^\+?\d{8,15}$/.test(phone) && ['phone', 'Check your phone number, or leave it empty.']);
+    (!EMAIL.test(email) && ['email', 'Check your email address.']) ||
+    (phone && !PHONE.test(phone) && ['phone', 'Check your phone number, or leave it empty.']);
   if (problem) return json(res, 400, { error: problem[1], field: problem[0] });
 
   // Counted only once the form is valid, so fixing a typo never uses up a payer's attempts.
@@ -221,14 +225,30 @@ async function createOrder(req, res) {
   }
 }
 
+const matchesOrder = (p, order) => p.order_id === order.id && p.amount === order.amount && p.currency === CURRENCY;
+
+// Razorpay refunds an authorized payment that is never captured, so one that matches its order
+// is captured here, whichever of /verify and the webhook sees it first, rather than relying on
+// the account's auto-capture setting. Returns the payment as it stands afterwards.
+async function captureIfAuthorized(payment, order) {
+  if (payment.status !== 'authorized' || !matchesOrder(payment, order)) return payment;
+  const route = `/payments/${encodeURIComponent(payment.id)}`;
+  try {
+    return await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: order.amount, currency: CURRENCY }) });
+  } catch (err) {
+    console.error(`capture of ${payment.id} failed:`, err.message); // usually someone else got there first
+    return rzp(route);
+  }
+}
+
 // POST /pay/api/verify: the checkout's success callback, checked before the page says "paid".
 async function verify(req, res) {
   if (rateLimited('verify', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
   let body;
   try {
     body = await readJson(req);
-  } catch {
-    return json(res, 400, { error: 'Bad request.' });
+  } catch (err) {
+    return badBody(res, err);
   }
   // Shape-checked before anything is looked up or written, so the ledger only ever holds
   // short, well-formed ids.
@@ -241,43 +261,37 @@ async function verify(req, res) {
   // verify (and is not worth a ledger line), and one that already has cannot verify twice.
   const known = orders.get(orderId);
   if (!known) return json(res, 400, { error: 'This payment is not one this page started.' });
-  if (known.paid) {
-    record('verify.replay', { order_id: orderId, payment_id: paymentId });
-    return json(res, 409, { error: 'This payment has already been confirmed.' });
-  }
   if (!safeEqual(hmac(`${known.id}|${paymentId}`, KEY_SECRET), signature)) {
     record('verify.bad_signature', { order_id: orderId, payment_id: paymentId });
     return json(res, 400, { error: 'The payment signature did not match.' });
   }
+  // `paid` is false, 'checking' while a confirmation is with Razorpay, or true. The page
+  // retries on 503 and takes 409 to mean an earlier try of its own got through.
+  if (known.paid === true) {
+    record('verify.replay', { order_id: orderId, payment_id: paymentId });
+    return json(res, 409, { error: 'This payment has already been confirmed.' });
+  }
+  if (known.paid === 'checking') return json(res, 503, { error: 'This payment is being confirmed. Try again in a moment.' });
 
   // Claimed before the lookup, so two verifies racing on one order cannot both pass;
   // released again if this one does not.
-  known.paid = true;
+  known.paid = 'checking';
 
   // The signature proves the ids belong together. It does not prove the money settled for
-  // the amount we asked, so ask Razorpay directly. Only a captured payment counts: Razorpay
-  // refunds an authorized one that is never captured, so one that matches this order is
-  // captured here rather than left to the account's auto-capture setting.
+  // the amount we asked, so ask Razorpay directly. Only a captured payment counts.
   try {
-    const route = `/payments/${encodeURIComponent(paymentId)}`;
-    const matches = (p) => p.order_id === known.id && p.amount === known.amount && p.currency === CURRENCY;
-    let payment = await rzp(route);
-    if (payment.status === 'authorized' && matches(payment)) {
-      try {
-        payment = await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: known.amount, currency: CURRENCY }) });
-      } catch (err) {
-        console.error('capture failed:', err.message); // usually auto-capture got there first
-        payment = await rzp(route);
-      }
-    }
-    const ok = matches(payment) && payment.status === 'captured';
+    const payment = await captureIfAuthorized(await rzp(`/payments/${encodeURIComponent(paymentId)}`), known);
+    const ok = matchesOrder(payment, known) && payment.status === 'captured';
     const facts = { order_id: known.id, payment_id: paymentId, invoice: known.invoice, status: payment.status, amount: payment.amount, method: payment.method };
     if (!ok) {
       known.paid = false;
       record('verify.mismatch', facts);
       return json(res, 400, { error: 'Razorpay does not show this payment as complete yet.' });
     }
-    record('verify.ok', facts);
+    // The money is in either way, so the payer hears so; but without this line a restart would
+    // forget the order was confirmed, so a failure here is worth shouting about.
+    known.paid = true;
+    if (!record('verify.ok', facts)) console.error(`LEDGER: verify.ok for ${paymentId} (invoice ${known.invoice}) was not written`);
     return json(res, 200, { ok: true, payment_id: paymentId, amount: payment.amount, invoice: known.invoice });
   } catch (err) {
     known.paid = false;
@@ -293,8 +307,8 @@ async function webhook(req, res) {
   let raw;
   try {
     raw = await readBody(req, 256 * 1024);
-  } catch {
-    return json(res, 413, { error: 'Too large.' });
+  } catch (err) {
+    return badBody(res, err);
   }
   const sig = req.headers['x-razorpay-signature'];
   if (!sig || !safeEqual(hmac(raw, WEBHOOK_SECRET), sig)) return json(res, 400, { error: 'Bad signature.' });
@@ -311,16 +325,21 @@ async function webhook(req, res) {
   const p = evt?.payload?.payment?.entity;
   const known = orders.get(p?.order_id);
   if (!known) return json(res, 200, { ok: true, ignored: true });
-  record('webhook', {
-    type: evt?.event,
-    payment_id: p.id,
-    order_id: known.id,
-    invoice: known.invoice,
-    amount: p.amount,
-    status: p.status,
-    refund_id: evt?.payload?.refund?.entity?.id,
-  });
-  return json(res, 200, { ok: true });
+  const facts = { payment_id: p.id, order_id: known.id, invoice: known.invoice, amount: p.amount };
+  record('webhook', { type: evt?.event, ...facts, status: p.status, refund_id: evt?.payload?.refund?.entity?.id });
+  json(res, 200, { ok: true });
+
+  // A payer who closes the tab before the page confirms leaves an authorized payment that only
+  // this event knows about. Capture it after answering, since Razorpay wants a fast reply.
+  if (evt?.event === 'payment.authorized') {
+    try {
+      const after = await captureIfAuthorized(p, known);
+      record('webhook.capture', { ...facts, status: after.status });
+    } catch (err) {
+      console.error(`webhook capture of ${p.id} failed:`, err.message);
+      record('webhook.capture', { ...facts, error: err.message });
+    }
+  }
 }
 
 // ---------------------------------------------------------------- server
