@@ -7,6 +7,8 @@
 import Base from '../layouts/Base.astro';
 import { site } from '../lib/site';
 import palette from '../lib/palette.json';
+// The service's own rules, handed to the script below through data- attributes.
+import { MIN_PAISE, MAX_PAISE, MAX_LENGTH, INVOICE, EMAIL, PHONE, rupees } from '../../payments/rules.mjs';
 ---
 <Base
   title={`Pay an invoice | ${site.name}`}
@@ -22,26 +24,40 @@ import palette from '../lib/palette.json';
       </p>
 
       {/* Hidden until the script below runs, since nothing here works without it. */}
-      <form class="brief pay" id="pay" hidden novalidate data-email={site.email} data-name={site.name} data-color={palette.accent}>
+      <form
+        class="brief pay"
+        id="pay"
+        hidden
+        novalidate
+        data-email={site.email}
+        data-name={site.name}
+        data-color={palette.accent}
+        data-min={MIN_PAISE}
+        data-max={MAX_PAISE}
+        data-max-label={rupees(MAX_PAISE)}
+        data-invoice-re={INVOICE.source}
+        data-email-re={EMAIL.source}
+        data-phone-re={PHONE.source}
+      >
         <label class="brief__field">
           <span>Invoice number</span>
-          <input name="invoice" type="text" autocomplete="off" maxlength="40" required />
+          <input name="invoice" type="text" autocomplete="off" maxlength={MAX_LENGTH.invoice} required />
         </label>
         <label class="brief__field">
           <span>Invoice total in ₹</span>
-          <input name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="15" required />
+          <input name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="20" required />
         </label>
         <label class="brief__field">
           <span>Your name</span>
-          <input name="name" type="text" autocomplete="name" maxlength="80" required />
+          <input name="name" type="text" autocomplete="name" maxlength={MAX_LENGTH.name} required />
         </label>
         <label class="brief__field">
           <span>Email, for the receipt</span>
-          <input name="email" type="email" autocomplete="email" maxlength="120" required />
+          <input name="email" type="email" autocomplete="email" maxlength={MAX_LENGTH.email} required />
         </label>
         <label class="brief__field">
           <span>Phone, optional</span>
-          <input name="phone" type="tel" autocomplete="tel" maxlength="20" />
+          <input name="phone" type="tel" autocomplete="tel" maxlength={MAX_LENGTH.phone} />
         </label>
         <div class="brief__actions">
           <button type="submit" class="btn" data-e="pay-start">Pay</button>
@@ -70,7 +86,7 @@ import palette from '../lib/palette.json';
           Refunds follow the <a class="link" href="/legal/refunds/">Cancellation &amp; Refunds</a> policy.
         </p>
         <p>
-          Paying from outside India, or more than ₹5,00,000 at once? Write to
+          Paying from outside India, or more than {rupees(MAX_PAISE)} at once? Write to
           <a class="link" href={`mailto:${site.email}`} data-e="pay-email">{site.email}</a> before you pay.
         </p>
       </div>
@@ -87,32 +103,35 @@ import palette from '../lib/palette.json';
       if (!form) return;
       form.hidden = false;
       var f = form.elements;
+      var d = form.dataset;
       var status = form.querySelector('.brief__status');
       var button = form.querySelector('button[type="submit"]');
       var done = document.getElementById('pay-done');
-      var email = form.dataset.email;
+      var email = d.email;
+      var rules = { invoice: new RegExp(d.invoiceRe), email: new RegExp(d.emailRe), phone: new RegExp(d.phoneRe) };
       var say = function (text) { status.textContent = text; };
 
       // A link can carry the invoice and the amount, e.g. /pay/?invoice=KRY-2026-014&amount=45000
       var q = new URLSearchParams(location.search);
-      if (q.get('invoice')) f.invoice.value = q.get('invoice').slice(0, 40);
-      if (q.get('amount')) f.amount.value = q.get('amount').slice(0, 15);
+      if (q.get('invoice')) f.invoice.value = q.get('invoice').slice(0, f.invoice.maxLength);
+      if (q.get('amount')) f.amount.value = q.get('amount').slice(0, f.amount.maxLength);
 
-      var inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 });
-      // "45,000", "₹45000" or "45000.50" in rupees → paise. Anything else is NaN.
-      var paise = function () {
-        var s = f.amount.value.replace(/[₹,\s]/g, '').replace(/^rs\.?/i, '');
-        return /^\d{1,7}(\.\d{1,2})?$/.test(s) ? Math.round(parseFloat(s) * 100) : NaN;
+      // Paise → "₹45,000" or "₹45,000.50", as payments/rules.mjs writes it.
+      var rupees = function (p) {
+        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: p % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(p / 100);
       };
+      // The total as an invoice prints it ("45000", "45,000.00", "₹ 45,000/-", "INR 45,000",
+      // "Rs. 45,000") in paise. Anything else is NaN.
+      var paise = function () {
+        var s = f.amount.value.trim().replace(/\/-$/, '').replace(/^(?:inr|rs\.?|₹)\s*/i, '').replace(/[,\s]/g, '');
+        return /^\d{1,9}(\.\d{1,2})?$/.test(s) ? Math.round(parseFloat(s) * 100) : NaN;
+      };
+      var phone = function () { return f.phone.value.replace(/[\s()-]/g, ''); };
       var label = function () {
         var p = paise();
-        button.textContent = p >= 100 ? 'Pay ' + inr.format(p / 100) : 'Pay';
+        button.textContent = p >= +d.min ? 'Pay ' + rupees(p) : 'Pay';
       };
       label();
-      form.addEventListener('input', function (e) {
-        e.target.removeAttribute('aria-invalid');
-        if (e.target === f.amount) label();
-      });
 
       var flag = function (field, text) {
         field.setAttribute('aria-invalid', 'true');
@@ -120,20 +139,18 @@ import palette from '../lib/palette.json';
         say(text);
         return true;
       };
-      var phone = function () { return f.phone.value.replace(/[\s()-]/g, ''); };
-      // The same rules the payments service applies, so a payer hears about a mistake here,
-      // next to the field, instead of after a round trip.
+      // The service's rules, so a payer hears about a mistake here, next to the field.
       var invalid = function () {
         var p = paise();
         var invoice = f.invoice.value.trim();
         return (
           (!invoice && flag(f.invoice, 'Add the invoice number.')) ||
-          (!/^[A-Za-z0-9][A-Za-z0-9 #/._-]*$/.test(invoice) && flag(f.invoice, 'Check the invoice number: letters, numbers, spaces and - / . _ # only.')) ||
-          (!(p >= 100) && flag(f.amount, 'Enter the total on the invoice, like 45000.')) ||
-          (p > 50000000 && flag(f.amount, 'One payment can be up to ₹5,00,000. Write to ' + email + ' for more.')) ||
+          (!rules.invoice.test(invoice) && flag(f.invoice, 'Check the invoice number: letters, numbers, spaces and - / . _ # only.')) ||
+          (!(p >= +d.min) && flag(f.amount, 'Enter the total on the invoice, like 45000.')) ||
+          (p > +d.max && flag(f.amount, 'One payment can be up to ' + d.maxLabel + '. Write to ' + email + ' for more.')) ||
           (f.name.value.trim().length < 2 && flag(f.name, 'Add your name.')) ||
-          (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.value.trim()) && flag(f.email, 'Check your email address.')) ||
-          (phone() && !/^\+?\d{8,15}$/.test(phone()) && flag(f.phone, 'Check your phone number, or leave it empty.'))
+          (!rules.email.test(f.email.value.trim()) && flag(f.email, 'Check your email address.')) ||
+          (phone() && !rules.phone.test(phone()) && flag(f.phone, 'Check your phone number, or leave it empty.'))
         );
       };
 
@@ -147,13 +164,16 @@ import palette from '../lib/palette.json';
         });
       };
 
+      // Loaded once, on the first press of Pay. A failed load is forgotten so the next press
+      // tries again, for instance after the payer allows the domain in a blocker.
       var checkout = null;
       var loadCheckout = function () {
         checkout = checkout || new Promise(function (resolve, reject) {
           var s = document.createElement('script');
+          var fail = function () { checkout = null; s.remove(); reject(new Error('checkout.js did not load')); };
           s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          s.onload = function () { if (window.Razorpay) resolve(window.Razorpay); else reject(new Error('no Razorpay')); };
-          s.onerror = function () { checkout = null; s.remove(); reject(new Error('checkout.js failed')); };
+          s.onload = function () { if (window.Razorpay) resolve(window.Razorpay); else fail(); };
+          s.onerror = fail;
           document.head.appendChild(s);
         });
         return checkout;
@@ -164,28 +184,78 @@ import palette from '../lib/palette.json';
         form.setAttribute('aria-busy', on ? 'true' : 'false');
       };
 
-      var showDone = function (b) {
-        done.querySelector('[data-amount]').textContent = inr.format(b.amount / 100);
-        done.querySelector('[data-invoice]').textContent = b.invoice;
-        done.querySelector('[data-payment]').textContent = b.payment_id;
+      // The order made for the details on screen. If the payer closes the checkout and presses
+      // Pay again without changing anything, the same order opens again: a payment they already
+      // approved in a UPI app then makes Razorpay refuse a second one, instead of charging twice.
+      var current = null;
+
+      var showDone = function (amount, invoice, paymentId) {
+        done.querySelector('[data-amount]').textContent = rupees(amount);
+        done.querySelector('[data-invoice]').textContent = invoice;
+        done.querySelector('[data-payment]').textContent = paymentId;
         form.hidden = true;
         done.hidden = false;
         done.focus();
         if (window.countClick) window.countClick('pay-done');
       };
 
-      // After Razorpay takes the money the button stays disabled whatever happens, so a
-      // payment that could not be confirmed is never paid a second time by mistake.
-      var confirmPayment = function (r) {
-        say('Confirming the payment with Razorpay…');
+      // After Razorpay takes the money the button stays disabled whatever happens, so a payment
+      // that could not be confirmed is never paid a second time by mistake. A confirmation that
+      // fails on the way (a dropped connection, Razorpay slow to answer) is tried again.
+      var confirmPayment = function (r, order, attempt) {
+        say(attempt ? 'Still confirming the payment with Razorpay…' : 'Confirming the payment with Razorpay…');
         var stuck = function (why) {
           say(why + ' If money left your account, it is safe: write to ' + email + ' and quote payment ID ' + r.razorpay_payment_id + '.');
         };
+        var again = function (why) {
+          if (attempt >= 3) return stuck(why);
+          setTimeout(function () { confirmPayment(r, order, attempt + 1); }, 2000 * Math.pow(2, attempt));
+        };
         api('verify', r).then(function (res) {
-          if (res.status === 200) showDone(res.body);
-          else stuck(res.body.error || 'Could not confirm the payment yet.');
-        }, function () { stuck('Could not reach krylabs.com to confirm the payment.'); });
+          // 409: an earlier try got through even though its answer did not.
+          if (res.status === 200 || res.status === 409) {
+            current = null;
+            showDone(order.amount, order.invoice, r.razorpay_payment_id);
+          } else if (res.status >= 500 || res.status === 429) {
+            again(res.body.error || 'Could not confirm the payment yet.');
+          } else {
+            stuck(res.body.error || 'Could not confirm the payment yet.');
+          }
+        }, function () { again('Could not reach krylabs.com to confirm the payment.'); });
       };
+
+      var openCheckout = function (Razorpay, order, details) {
+        var rzp = new Razorpay({
+          key: order.key_id,
+          order_id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          name: d.name,
+          description: 'Invoice ' + details.invoice,
+          image: location.origin + '/logo.png',
+          prefill: { name: details.name, email: details.email, contact: details.phone },
+          notes: { invoice: details.invoice },
+          theme: { color: d.color },
+          handler: function (r) { confirmPayment(r, { amount: order.amount, invoice: details.invoice }, 0); },
+          modal: {
+            ondismiss: function () {
+              busy(false);
+              say('The payment window was closed. If you approved the payment in your UPI or bank app, it can take a minute to arrive, so do not pay again. Otherwise, press Pay to try again.');
+            },
+          },
+        });
+        rzp.on('payment.failed', function (r) {
+          var why = r && r.error && r.error.description;
+          say((why ? why + ' ' : '') + 'Try again in the payment window, with the same or another method.');
+        });
+        say('');
+        rzp.open();
+      };
+
+      form.addEventListener('input', function (e) {
+        e.target.removeAttribute('aria-invalid');
+        if (e.target === f.amount) label();
+      });
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -197,11 +267,24 @@ import palette from '../lib/palette.json';
           email: f.email.value.trim(),
           phone: phone(),
         };
+        var key = JSON.stringify(details);
         busy(true);
         say('Starting the payment…');
         // Checkout first: if it cannot load (a blocker, a flaky connection), no order is made.
         loadCheckout().then(function (Razorpay) {
-          return api('order', details).then(function (res) { startCheckout(Razorpay, res, details); }, function () {
+          if (current && current.key === key) return openCheckout(Razorpay, current.order, details);
+          return api('order', details).then(function (res) {
+            if (res.status !== 200) {
+              busy(false);
+              var field = res.body.field && f[res.body.field];
+              var why = res.body.error || 'Payments are down for a moment. Try again shortly, or write to ' + email + '.';
+              if (field) flag(field, why);
+              else say(why);
+              return;
+            }
+            current = { key: key, order: res.body };
+            openCheckout(Razorpay, res.body, details);
+          }, function () {
             busy(false);
             say('Could not reach krylabs.com. Check your connection and try again, or write to ' + email + '.');
           });
@@ -213,44 +296,6 @@ import palette from '../lib/palette.json';
           say('Something went wrong before the payment started. Nothing was charged. Try again, or write to ' + email + '.');
         });
       });
-
-      // Hands the order the service made to Razorpay's checkout, or says why there is none.
-      var startCheckout = function (Razorpay, res, details) {
-        if (res.status !== 200) {
-          busy(false);
-          var field = res.body.field && f[res.body.field];
-          var why = res.body.error || 'Payments are down for a moment. Try again shortly, or write to ' + email + '.';
-          if (field) flag(field, why);
-          else say(why);
-          return;
-        }
-        var order = res.body;
-        var rzp = new Razorpay({
-          key: order.key_id,
-          order_id: order.id,
-          amount: order.amount,
-          currency: order.currency,
-          name: form.dataset.name,
-          description: 'Invoice ' + details.invoice,
-          image: location.origin + '/logo.png',
-          prefill: { name: details.name, email: details.email, contact: details.phone },
-          notes: { invoice: details.invoice },
-          theme: { color: form.dataset.color },
-          handler: confirmPayment,
-          modal: {
-            ondismiss: function () {
-              busy(false);
-              say('The payment window was closed. If you did not finish paying, nothing was charged. Press Pay to try again.');
-            },
-          },
-        });
-        rzp.on('payment.failed', function (r) {
-          var why = r && r.error && r.error.description;
-          say((why ? why + ' ' : '') + 'Try again in the payment window, with the same or another method.');
-        });
-        say('');
-        rzp.open();
-      };
     })();
   </script>
 </Base>
