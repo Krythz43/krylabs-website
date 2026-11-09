@@ -23,6 +23,7 @@ const created = [];
 const payments = new Map();
 const captures = [];
 let failOrders = false;
+let failCapture = false;
 const fake = http.createServer(async (req, res) => {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -39,11 +40,14 @@ const fake = http.createServer(async (req, res) => {
     created.push(order);
     return send(200, order);
   }
+  const o = req.url.match(/^\/orders\/([^/]+)\/payments$/);
+  if (req.method === 'GET' && o) return send(200, { items: [...payments.values()].filter((p) => p.order_id === o[1]) });
   const m = req.url.match(/^\/payments\/([^/]+)(\/capture)?$/);
   const payment = m && payments.get(m[1]);
   if (req.method === 'GET' && payment && !m[2]) return send(200, payment);
   if (req.method === 'POST' && payment && m[2]) {
     const body = JSON.parse(Buffer.concat(chunks));
+    if (failCapture) return send(502, { error: { description: 'gateway timeout' } });
     if (payment.status !== 'authorized' || body.amount !== payment.amount) return send(400, { error: { description: 'cannot capture' } });
     captures.push(payment.id);
     payment.status = 'captured';
@@ -107,8 +111,8 @@ const post = (route, body, headers = { 'cf-connecting-ip': `10.0.0.${++ip}` }) =
 
 const good = { invoice: 'KRY-2026-014', amount_paise: 4_500_000, name: 'Asha Rao', email: 'asha@example.com', phone: '+91 98450 12345' };
 
-async function paidOrder(overrides = {}) {
-  const { body: order } = await post('order', good);
+async function paidOrder(overrides = {}, existing) {
+  const order = existing ?? (await post('order', good)).body;
   const paymentId = `pay_${crypto.randomBytes(4).toString('hex')}`;
   payments.set(paymentId, { id: paymentId, order_id: order.id, amount: order.amount, currency: 'INR', status: 'captured', method: 'upi', ...overrides });
   return { order, paymentId, signature: sign(`${order.id}|${paymentId}`) };
@@ -141,6 +145,7 @@ test('turns away bad orders before Razorpay sees them', async () => {
     { amount_paise: 5_00_000_01 },
     { invoice: '' },
     { invoice: '<script>' },
+    { invoice: 'K'.repeat(41) },
     { name: 'A' },
     { email: 'not-an-email' },
     { phone: '12' },
@@ -212,9 +217,48 @@ test('does not call a payment complete when Razorpay disagrees, and lets it veri
   }
   const { order, paymentId, signature } = await paidOrder({ status: 'created' });
   const fields = { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature };
-  assert.equal((await post('verify', fields)).status, 400);
+  assert.equal((await post('verify', fields)).status, 503, 'still in flight: the page tries again');
   payments.get(paymentId).status = 'captured';
   assert.equal((await post('verify', fields)).status, 200);
+});
+
+test('asks the page to try again when a capture fails on the way, and confirms once it goes through', async () => {
+  const { order, paymentId, signature } = await paidOrder({ status: 'authorized' });
+  const fields = { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature };
+  failCapture = true;
+  try {
+    assert.equal((await post('verify', fields)).status, 503);
+  } finally {
+    failCapture = false;
+  }
+  assert.equal((await post('verify', fields)).status, 200);
+  assert.equal(payments.get(paymentId).status, 'captured');
+});
+
+test('never captures a second payment on an order that already has one', async () => {
+  const hook = (entity) => {
+    const evt = JSON.stringify({ event: 'payment.authorized', payload: { payment: { entity } } });
+    return fetch(`${base}/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': sign(evt, WEBHOOK_SECRET) }, body: evt });
+  };
+  // Paid by card and confirmed; then the UPI request from before is approved late.
+  const first = await paidOrder({ status: 'authorized' });
+  assert.equal((await post('verify', { razorpay_order_id: first.order.id, razorpay_payment_id: first.paymentId, razorpay_signature: first.signature })).status, 200);
+  const late = await paidOrder({ status: 'authorized' }, first.order);
+  await hook({ ...payments.get(late.paymentId) });
+  await new Promise((r) => setTimeout(r, 200));
+  assert.ok(!captures.includes(late.paymentId), 'the late payment is left for Razorpay to refund');
+  assert.match(fs.readFileSync(path.join(dataDir, 'invoice-payments.jsonl'), 'utf8'), new RegExp(`"capture.skipped".*"payment_id":"${late.paymentId}"`));
+
+  // Two authorized payments on one order, the webhook and the page racing: one capture only.
+  const a = await paidOrder({ status: 'authorized' });
+  const b = await paidOrder({ status: 'authorized' }, a.order);
+  const [, verified] = await Promise.all([
+    hook({ ...payments.get(a.paymentId) }),
+    post('verify', { razorpay_order_id: b.order.id, razorpay_payment_id: b.paymentId, razorpay_signature: b.signature }),
+  ]);
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal([a.paymentId, b.paymentId].filter((id) => captures.includes(id)).length, 1);
+  assert.equal(verified.status, captures.includes(b.paymentId) ? 200 : 503);
 });
 
 test('says so when Razorpay cannot create the order', async () => {
@@ -234,6 +278,12 @@ test('limits how often one visitor can start a payment, without counting typos',
   assert.deepEqual(statuses.slice(0, 8), Array(8).fill(200));
   assert.equal(statuses[8], 429);
   assert.equal((await post('order', good, { 'cf-connecting-ip': '192.0.2.8' })).status, 200, 'other visitors are unaffected');
+});
+
+test('copes with a forwarded address that is not one', async () => {
+  for (const ip of ['1:2:3:4:5:6:7:8::9', 'not-an-ip', '::ffff:192.0.2.1', '64:ff9b::192.0.2.33']) {
+    assert.equal((await post('order', good, { 'cf-connecting-ip': ip })).status, 200, ip);
+  }
 });
 
 test('counts an IPv6 visitor by its /64', async () => {

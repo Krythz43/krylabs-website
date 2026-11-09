@@ -9,8 +9,9 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
-import { CURRENCY, MIN_PAISE, MAX_PAISE, MAX_LENGTH, INVOICE, EMAIL, PHONE, rupees } from './rules.mjs';
+import { CURRENCY, tidy, problemWith } from './rules.mjs';
 
 const PORT = Number(process.env.PORT) || 3073;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -30,22 +31,25 @@ if (!KEY_ID || !KEY_SECRET) {
 const MODE = KEY_ID.startsWith('rzp_test_') ? 'test' : 'live';
 
 // ---------------------------------------------------------------- ledger
-// One JSONL file: every order created, every verify attempt and every webhook. Enough to
+// One JSONL file: every order created, every confirmation and capture, every webhook. Enough to
 // match a payment to an invoice by hand, and to rebuild the order list after a restart.
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const LEDGER = path.join(DATA_DIR, 'invoice-payments.jsonl');
 
-// Orders THIS server created. Razorpay's docs are explicit: verify the signature against
-// the order id you hold, never the razorpay_order_id the browser sends back. Without this
-// list, any valid (order, payment, signature) triple could be replayed against us.
-const orders = new Map(); // order_id -> { id, amount, invoice, paid }
+// Orders THIS server created. Razorpay's docs are explicit: verify the signature against the
+// order id you hold, never the razorpay_order_id the browser sends back. Without this list, any
+// valid (order, payment, signature) triple could be replayed against us.
+//   paid:     false, 'checking' while a confirmation is with Razorpay, or true once confirmed
+//   captured: the id of the payment captured against it, so a second is never captured
+const orders = new Map(); // order_id -> { id, amount, invoice, paid, captured, lock }
+const newOrder = (id, amount, invoice) => ({ id, amount, invoice, paid: false, captured: null, lock: Promise.resolve() });
 
-// Returns false when the line could not be written. An order is only handed to a payer once
+// Resolves to false when the line could not be written. An order is only handed to a payer once
 // it is on disk, since the ledger is how this service remembers its orders across a restart.
-function record(event, payload) {
+async function record(event, payload) {
   const line = JSON.stringify({ at: new Date().toISOString(), event, ...payload });
   try {
-    fs.appendFileSync(LEDGER, line + '\n');
+    await fs.promises.appendFile(LEDGER, line + '\n');
     return true;
   } catch (err) {
     console.error('ledger write failed:', err.message);
@@ -63,8 +67,11 @@ try {
       console.error('ledger: skipping a corrupt line'); // one bad line must not lose the rest
       continue;
     }
-    if (e.event === 'order.created') orders.set(e.order_id, { id: e.order_id, amount: e.amount, invoice: e.invoice, paid: false });
-    if (e.event === 'verify.ok' && orders.has(e.order_id)) orders.get(e.order_id).paid = true;
+    if (e.event === 'order.created') orders.set(e.order_id, newOrder(e.order_id, e.amount, e.invoice));
+    const o = orders.get(e.order_id);
+    if (!o) continue;
+    if (e.event === 'verify.ok') o.paid = true;
+    if (['verify.ok', 'webhook', 'webhook.capture'].includes(e.event) && e.status === 'captured') o.captured ??= e.payment_id;
   }
   console.log(`replayed ${orders.size} orders from the ledger`);
 } catch (err) {
@@ -139,36 +146,78 @@ async function rzp(route, init = {}) {
 // Both routes are open to anyone by nature, so each visitor gets a ceiling: on orders so the
 // key cannot be used to spam Razorpay, on confirmations so nobody can grind the ledger.
 // There is deliberately no cap across all visitors, which one attacker could fill for everyone.
+const WINDOW = 60_000;
 const hits = { order: new Map(), verify: new Map() };
-const LIMITS = { order: 8, verify: 20 }; // a minute
+const LIMITS = { order: 8, verify: 20 }; // per WINDOW
 function rateLimited(kind, visitor, now = Date.now()) {
-  const mine = (hits[kind].get(visitor) || []).filter((t) => now - t < 60_000);
+  const mine = (hits[kind].get(visitor) || []).filter((t) => now - t < WINDOW);
   if (mine.length >= LIMITS[kind]) return true;
   mine.push(now);
   hits[kind].set(visitor, mine);
   return false;
 }
-setInterval(() => Object.values(hits).forEach((m) => m.clear()), 10 * 60_000).unref();
+// Forget visitors whose latest attempt has aged out; everyone else keeps their window.
+setInterval(() => {
+  const now = Date.now();
+  for (const map of Object.values(hits)) for (const [k, v] of map) if (now - v[v.length - 1] >= WINDOW) map.delete(k);
+}, WINDOW).unref();
 
 // Cloudflare names the visitor; everything else arrives from cloudflared on loopback. The header
 // can be trusted because the origin is reachable only through the tunnel (the droplet's
-// firewall admits SSH alone), so no one can send it straight to Caddy. An IPv6
-// address counts by its /64, the block one connection usually holds, so rotating addresses
-// inside it does not buy more attempts.
+// firewall admits SSH alone), so no one can send it straight to Caddy. An IPv6 address counts
+// by its /64, the block one connection usually holds, so rotating addresses inside it does not
+// buy more attempts. Anything that is not an address is used as given, cut short.
 function visitorOf(req) {
-  const ip =
+  const ip = (
     String(req.headers['cf-connecting-ip'] || '').trim() ||
     String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-    String(req.socket.remoteAddress || '');
-  if (!ip.includes(':') || ip.startsWith('::ffff:')) return ip;
-  const [head, tail = ''] = ip.toLowerCase().split('::');
+    String(req.socket.remoteAddress || '')
+  ).toLowerCase();
+  if (!net.isIPv6(ip) || ip.startsWith('::ffff:')) return ip.slice(0, 64);
+  const [head, tail = ''] = ip.split('::');
   const left = head ? head.split(':') : [];
   const right = tail ? tail.split(':') : [];
-  const groups = ip.includes('::') ? [...left, ...Array(8 - left.length - right.length).fill('0'), ...right] : left;
-  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64';
+  const gap = ip.includes('::') ? Array(Math.max(0, 8 - left.length - right.length)).fill('0') : [];
+  return [...left, ...gap, ...right].slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64';
 }
 
-const clean = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+// ---------------------------------------------------------------- capture
+const matchesOrder = (p, order) => p.order_id === order.id && p.amount === order.amount && p.currency === CURRENCY;
+
+// Razorpay refunds an authorized payment that is never captured, so one that matches its order
+// is captured here, by whichever of /verify and the webhook sees it first, rather than relying
+// on the account's auto-capture setting. Captures for one order run one at a time, and an order
+// that already has a captured payment never captures another: a second payment on the same
+// order (a UPI request approved after the payer switched to a card) is left for Razorpay to
+// refund. Resolves to the payment as it stands afterwards.
+function captureIfAuthorized(payment, order) {
+  if (payment.status === 'captured' && matchesOrder(payment, order)) order.captured ??= payment.id;
+  if (payment.status !== 'authorized' || !matchesOrder(payment, order)) return Promise.resolve(payment);
+
+  const run = order.lock.then(async () => {
+    const route = `/payments/${encodeURIComponent(payment.id)}`;
+    if (!order.captured) {
+      const { items = [] } = await rzp(`/orders/${encodeURIComponent(order.id)}/payments`);
+      order.captured = items.find((p) => p.status === 'captured')?.id ?? null;
+    }
+    if (order.captured && order.captured !== payment.id) {
+      console.error(`not capturing ${payment.id}: ${order.id} already has ${order.captured} captured`);
+      void record('capture.skipped', { order_id: order.id, payment_id: payment.id, invoice: order.invoice, captured: order.captured });
+      return rzp(route);
+    }
+    let after;
+    try {
+      after = await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: order.amount, currency: CURRENCY }) });
+    } catch (err) {
+      console.error(`capture of ${payment.id} failed:`, err.message); // often auto-capture got there first
+      after = await rzp(route);
+    }
+    if (after.status === 'captured') order.captured = after.id;
+    return after;
+  });
+  order.lock = run.catch(() => {});
+  return run;
+}
 
 // ---------------------------------------------------------------- routes
 
@@ -183,25 +232,15 @@ async function createOrder(req, res) {
     return badBody(res, err);
   }
 
-  const invoice = clean(body.invoice, MAX_LENGTH.invoice);
-  const name = clean(body.name, MAX_LENGTH.name);
-  const email = clean(body.email, MAX_LENGTH.email);
-  const phone = clean(body.phone, MAX_LENGTH.phone).replace(/[\s()-]/g, '');
-  const amount = body.amount_paise;
-
-  // The page checks the same rules (payments/rules.mjs) first; `field` lets it point at the one to fix.
-  const problem =
-    (!INVOICE.test(invoice) && ['invoice', 'Check the invoice number: letters, numbers, spaces and - / . _ # only.']) ||
-    ((!Number.isSafeInteger(amount) || amount < MIN_PAISE) && ['amount', `Enter the total on your invoice, ${rupees(MIN_PAISE)} or more.`]) ||
-    (amount > MAX_PAISE && ['amount', `One payment can be up to ${rupees(MAX_PAISE)}. Write to us for more.`]) ||
-    (name.length < 2 && ['name', 'Add your name.']) ||
-    (!EMAIL.test(email) && ['email', 'Check your email address.']) ||
-    (phone && !PHONE.test(phone) && ['phone', 'Check your phone number, or leave it empty.']);
+  // The page runs the same check (payments/rules.mjs) first; `field` lets it point at the one to fix.
+  const d = tidy(body);
+  const problem = problemWith(d);
   if (problem) return json(res, 400, { error: problem[1], field: problem[0] });
 
   // Counted only once the form is valid, so fixing a typo never uses up a payer's attempts.
   if (rateLimited('order', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
 
+  const { invoice, amount_paise: amount, name, email, phone } = d;
   const receipt = `krylabs_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
   try {
     const order = await rzp('/orders', {
@@ -213,35 +252,23 @@ async function createOrder(req, res) {
         notes: { source: 'krylabs.com/pay', invoice, name, email, phone },
       }),
     });
-    if (!record('order.created', { order_id: order.id, receipt, amount: order.amount, invoice, name, email, phone })) {
+    if (!(await record('order.created', { order_id: order.id, receipt, amount: order.amount, invoice, name, email, phone }))) {
       return json(res, 503, { error: 'Payments are down for a moment. Please try again shortly.' });
     }
-    orders.set(order.id, { id: order.id, amount: order.amount, invoice, paid: false });
+    orders.set(order.id, newOrder(order.id, order.amount, invoice));
     return json(res, 200, { id: order.id, amount: order.amount, currency: order.currency, key_id: KEY_ID });
   } catch (err) {
     console.error('order failed:', err.message);
-    record('order.failed', { invoice, amount, error: err.message });
+    void record('order.failed', { invoice, amount, error: err.message });
     return json(res, 502, { error: 'Could not start the payment. Please try again in a minute.' });
   }
 }
 
-const matchesOrder = (p, order) => p.order_id === order.id && p.amount === order.amount && p.currency === CURRENCY;
-
-// Razorpay refunds an authorized payment that is never captured, so one that matches its order
-// is captured here, whichever of /verify and the webhook sees it first, rather than relying on
-// the account's auto-capture setting. Returns the payment as it stands afterwards.
-async function captureIfAuthorized(payment, order) {
-  if (payment.status !== 'authorized' || !matchesOrder(payment, order)) return payment;
-  const route = `/payments/${encodeURIComponent(payment.id)}`;
-  try {
-    return await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: order.amount, currency: CURRENCY }) });
-  } catch (err) {
-    console.error(`capture of ${payment.id} failed:`, err.message); // usually someone else got there first
-    return rzp(route);
-  }
-}
+// Razorpay's payment states that can still become "captured" without the payer doing anything.
+const IN_FLIGHT = ['created', 'authorized'];
 
 // POST /pay/api/verify: the checkout's success callback, checked before the page says "paid".
+// 200 confirmed; 409 confirmed earlier; 503 not yet, try again; 400 never will be.
 async function verify(req, res) {
   if (rateLimited('verify', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
   let body;
@@ -262,37 +289,37 @@ async function verify(req, res) {
   const known = orders.get(orderId);
   if (!known) return json(res, 400, { error: 'This payment is not one this page started.' });
   if (!safeEqual(hmac(`${known.id}|${paymentId}`, KEY_SECRET), signature)) {
-    record('verify.bad_signature', { order_id: orderId, payment_id: paymentId });
+    void record('verify.bad_signature', { order_id: orderId, payment_id: paymentId });
     return json(res, 400, { error: 'The payment signature did not match.' });
   }
-  // `paid` is false, 'checking' while a confirmation is with Razorpay, or true. The page
-  // retries on 503 and takes 409 to mean an earlier try of its own got through.
   if (known.paid === true) {
-    record('verify.replay', { order_id: orderId, payment_id: paymentId });
+    void record('verify.replay', { order_id: orderId, payment_id: paymentId });
     return json(res, 409, { error: 'This payment has already been confirmed.' });
   }
   if (known.paid === 'checking') return json(res, 503, { error: 'This payment is being confirmed. Try again in a moment.' });
 
-  // Claimed before the lookup, so two verifies racing on one order cannot both pass;
+  // Claimed before the lookup, so two confirmations racing on one order cannot both pass;
   // released again if this one does not.
   known.paid = 'checking';
 
-  // The signature proves the ids belong together. It does not prove the money settled for
-  // the amount we asked, so ask Razorpay directly. Only a captured payment counts.
+  // The signature proves the ids belong together. It does not prove the money arrived for the
+  // amount we asked, so ask Razorpay directly. Only a captured payment counts.
   try {
     const payment = await captureIfAuthorized(await rzp(`/payments/${encodeURIComponent(paymentId)}`), known);
-    const ok = matchesOrder(payment, known) && payment.status === 'captured';
     const facts = { order_id: known.id, payment_id: paymentId, invoice: known.invoice, status: payment.status, amount: payment.amount, method: payment.method };
-    if (!ok) {
-      known.paid = false;
-      record('verify.mismatch', facts);
-      return json(res, 400, { error: 'Razorpay does not show this payment as complete yet.' });
+    if (matchesOrder(payment, known) && payment.status === 'captured') {
+      known.paid = true;
+      // The money is in either way, so the payer hears so; but without this line a restart would
+      // forget the order was confirmed, so a failure here is worth shouting about.
+      if (!(await record('verify.ok', facts))) console.error(`LEDGER: verify.ok for ${paymentId} (invoice ${known.invoice}) was not written`);
+      return json(res, 200, { ok: true, payment_id: paymentId, amount: payment.amount, invoice: known.invoice });
     }
-    // The money is in either way, so the payer hears so; but without this line a restart would
-    // forget the order was confirmed, so a failure here is worth shouting about.
-    known.paid = true;
-    if (!record('verify.ok', facts)) console.error(`LEDGER: verify.ok for ${paymentId} (invoice ${known.invoice}) was not written`);
-    return json(res, 200, { ok: true, payment_id: paymentId, amount: payment.amount, invoice: known.invoice });
+    known.paid = false;
+    void record('verify.not_captured', facts);
+    if (matchesOrder(payment, known) && IN_FLIGHT.includes(payment.status)) {
+      return json(res, 503, { error: 'Razorpay is still processing this payment.' });
+    }
+    return json(res, 400, { error: 'Razorpay does not show this payment as complete.' });
   } catch (err) {
     known.paid = false;
     console.error('verify lookup failed:', err.message);
@@ -323,22 +350,21 @@ async function webhook(req, res) {
   // payments arrive here too. Only payments against an order this page created are filed;
   // the rest are acknowledged and dropped. Either way the answer is a fast 200, or Razorpay retries.
   const p = evt?.payload?.payment?.entity;
-  const known = orders.get(p?.order_id);
+  const known = p && orders.get(p.order_id);
   if (!known) return json(res, 200, { ok: true, ignored: true });
   const facts = { payment_id: p.id, order_id: known.id, invoice: known.invoice, amount: p.amount };
-  record('webhook', { type: evt?.event, ...facts, status: p.status, refund_id: evt?.payload?.refund?.entity?.id });
+  void record('webhook', { type: evt.event, ...facts, status: p.status, refund_id: evt.payload?.refund?.entity?.id });
   json(res, 200, { ok: true });
 
   // A payer who closes the tab before the page confirms leaves an authorized payment that only
   // this event knows about. Capture it after answering, since Razorpay wants a fast reply.
-  if (evt?.event === 'payment.authorized') {
-    try {
-      const after = await captureIfAuthorized(p, known);
-      record('webhook.capture', { ...facts, status: after.status });
-    } catch (err) {
-      console.error(`webhook capture of ${p.id} failed:`, err.message);
-      record('webhook.capture', { ...facts, error: err.message });
-    }
+  // A payment.captured event just teaches the order which payment it has.
+  try {
+    const after = await captureIfAuthorized(p, known);
+    if (evt.event === 'payment.authorized') void record('webhook.capture', { ...facts, status: after.status });
+  } catch (err) {
+    console.error(`webhook capture of ${p.id} failed:`, err.message);
+    void record('webhook.capture', { ...facts, error: err.message });
   }
 }
 
