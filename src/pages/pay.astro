@@ -1,46 +1,113 @@
 ---
-// Pay a Krylabs invoice through Razorpay. The page holds no secrets: it asks the payments
-// service (payments/server.mjs, behind /pay/api/) for an order, opens Razorpay's checkout
-// on it, and has the service confirm the result before it says "paid".
+// The two fixed-price offers, paid through Razorpay: the iOS App Audit and a 30-minute call.
+// The page holds no secrets and sets no price. The prices live in payments/rules.mjs, which
+// the payments service (payments/server.mjs, behind /pay/api/) charges from, so the page can
+// only show what is charged. Anything else is quoted and invoiced by hand, not paid here.
 //
-// A link can fill in the invoice and the amount: /pay/?invoice=KRY-2026-014&amount=45000
+// A link can pick the offer: /pay/?offer=call
 import Base from '../layouts/Base.astro';
 import { site } from '../lib/site';
-import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
+import { OFFERS, MAX_LENGTH, dollars } from '../../payments/rules.mjs';
+
+const first = site.founder.name.split(' ')[0];
+
+// What each offer is, in the order the cards stand. Each point is [what, the detail].
+const cards = [
+  {
+    id: 'audit',
+    length: 'One week',
+    line: 'Somebody has to read the code the AI wrote.',
+    points: [
+      ['AI slop', 'Code an assistant wrote and nobody read: the same view built three ways, dead code, errors swallowed in silence, force unwraps, 2,000-line files.'],
+      ['App Review', 'What gets apps rejected: no privacy manifest, no way to delete an account, a Google login with no Sign in with Apple beside it, permission prompts that explain nothing.'],
+      ['Crashes and hangs', 'Work on the main thread, leaks and retain cycles, and what your crash reports already say.'],
+      ['Speed', 'Launch time, scroll hitches, full-size images in thumbnails, background work that drains the battery.'],
+      ['Security', 'API keys shipped inside the app, tokens kept outside the Keychain, App Transport Security switched off.'],
+      ['Accessibility', 'Dynamic Type, VoiceOver labels, contrast and tap targets.'],
+      ['Upkeep', 'Deprecated APIs, stale dependencies, and the code that takes money with no tests on it.'],
+    ],
+    after: 'A written report within a week. Every problem ranked by how much it hurts, with the file, the line and the fix. Yours to keep, whoever does the fixing.',
+    needs: 'Read access to the repository and a TestFlight build.',
+    next: `${first} writes within 48 hours for access to the repository. The week starts when it lands.`,
+  },
+  {
+    id: 'call',
+    length: '30 minutes on video',
+    line: 'Bring the problem that ate your week.',
+    points: [
+      ['Rejected', 'An App Review rejection you cannot decode, and what to send back.'],
+      ['Fix or restart', 'Whether the vibe-coded app is worth saving, or cheaper to start again.'],
+      ['A plan, checked', 'A Live Activity, widgets, sync, payments or the whole architecture, before you build it.'],
+      ['A second opinion', 'On a quote or an estimate someone else gave you.'],
+    ],
+    after: `Half an hour with ${first}, who built Blinkit's order-tracking Live Activity and worked on payments at PhonePe. You leave with answers, not a sales pitch.`,
+    next: `${first} writes within 48 hours with times that overlap your day.`,
+  },
+] as const;
 ---
 <Base
-  title={`Pay an invoice | ${site.name}`}
-  description={`Pay a ${site.name} invoice in rupees by UPI, card or netbanking, through Razorpay.`}
+  title={`iOS App Audit and 30-minute call | ${site.name}`}
+  description={`A ${dollars(OFFERS.audit.cents)} iOS App Audit that reads the code your AI wrote, or 30 minutes with an iOS engineer from Blinkit and PhonePe for ${dollars(OFFERS.call.cents)}.`}
 >
   <section class="page page--end">
     <div class="container">
-      <p class="kicker hero__kicker">Payments</p>
-      <h1 class="display">Pay an invoice</h1>
+      <p class="kicker hero__kicker">Start small</p>
+      <h1 class="display">Prices, not quotes.</h1>
       <p class="lead page__lead">
-        Two things from the invoice, its number and its total. Razorpay takes it from there, by UPI, card or
-        netbanking.
+        Two ways to get a senior iOS engineer on your app this week. Pick one, pay, and {first} writes to you
+        within 48 hours.
       </p>
+
+      {/* The cards are content first, readable without the script. Their radios belong to the
+          pay form below through form="pay", so choosing a card chooses what is paid for. */}
+      <div class="offers" role="radiogroup" aria-label="What you are paying for">
+        {cards.map((c) => {
+          const o = OFFERS[c.id];
+          return (
+            <label class="offer" data-e={`pay-offer-${c.id}`}>
+              <input
+                type="radio"
+                name="offer"
+                value={c.id}
+                form="pay"
+                checked={c.id === 'audit'}
+                aria-label={`${o.name}, ${dollars(o.cents)}${'was' in o ? `, was ${dollars(o.was)}` : ''}`}
+              />
+              <span class="offer__head">
+                <span class="offer__name">{o.name}</span>
+                <span class="offer__dot" aria-hidden="true"></span>
+              </span>
+              <span class="offer__price">
+                {'was' in o && <s class="offer__was">{dollars(o.was)}</s>}
+                <span class="display">{dollars(o.cents)}</span>
+                <span class="offer__length">{c.length}</span>
+              </span>
+              <span class="offer__line display">{c.line}</span>
+              <span class="offer__points">
+                {c.points.map(([t, d]) => (
+                  <span class="offer__point"><strong>{t}.</strong> {d}</span>
+                ))}
+              </span>
+              <span class="offer__after">{c.after}</span>
+              {'needs' in c && <span class="offer__needs small">Needs: {c.needs}</span>}
+            </label>
+          );
+        })}
+      </div>
 
       {/* Hidden until the script below runs, since nothing here works without it. */}
       <form class="brief pay" id="pay" hidden novalidate>
-        <label class="brief__field">
-          <span>Invoice number</span>
-          <input name="invoice" type="text" autocomplete="off" maxlength={MAX_LENGTH.invoice} required />
-        </label>
-        <label class="brief__field">
-          <span>Invoice total in ₹</span>
-          <input name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="20" required />
-        </label>
+        <h2 class="pay__title brief__field--wide">Your details</h2>
         <label class="brief__field">
           <span>Your name</span>
           <input name="name" type="text" autocomplete="name" maxlength={MAX_LENGTH.name} required />
         </label>
         <label class="brief__field">
-          <span>Email, for the receipt</span>
+          <span>Email, for the receipt and the next step</span>
           <input name="email" type="email" autocomplete="email" maxlength={MAX_LENGTH.email} required />
         </label>
         <label class="brief__field">
-          <span>Phone, optional</span>
+          <span>Phone or WhatsApp, optional</span>
           <input name="phone" type="tel" autocomplete="tel" maxlength={MAX_LENGTH.phone} />
         </label>
         <div class="brief__actions">
@@ -51,74 +118,74 @@ import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
 
       <div class="pay__done" id="pay-done" hidden tabindex="-1">
         <h2 class="display">Paid. Thank you.</h2>
-        <p class="lead">
-          <span data-amount></span> for invoice <span data-invoice></span>. Razorpay emails you a receipt.
-        </p>
+        <p class="lead"><span data-amount></span> for the <span data-offer></span>. Razorpay emails you a receipt.</p>
+        {cards.map((c) => <p class="lead" data-next={c.id} hidden>{c.next}</p>)}
         <p class="small">Payment ID <code data-payment></code>. Quote it if you write to us about this payment.</p>
       </div>
 
       <noscript>
-        <p class="lead">
-          This page needs JavaScript to open Razorpay's checkout. Without it, write to
+        <p class="lead pay__noscript">
+          Paying here needs JavaScript to open Razorpay's checkout. Without it, write to
           <a class="link" href={`mailto:${site.email}`}>{site.email}</a> for a payment link.
         </p>
       </noscript>
 
       <div class="pay__fine small">
         <p>
-          Razorpay handles the payment, so {site.name} never sees your card, UPI or bank details.
+          Prices are in US dollars, paid by card through Razorpay, so {site.name} never sees your card details.
           Refunds follow the <a class="link" href="/legal/refunds/">Cancellation &amp; Refunds</a> policy.
         </p>
         <p>
-          Paying from outside India, or more than {rupees(MAX_PAISE)} at once? Write to
-          <a class="link" href={`mailto:${site.email}`} data-e="pay-email">{site.email}</a> before you pay.
+          Card declined, or need another way to pay? Write to
+          <a class="link" href={`mailto:${site.email}`} data-e="pay-email">{site.email}</a>. Bigger work is quoted
+          after a conversation and invoiced by email.
         </p>
       </div>
     </div>
   </section>
 
   <script>
-    // The pay form. It asks /pay/api/order for a Razorpay order, opens Razorpay's checkout on
-    // it, then has /pay/api/verify check the result with Razorpay before showing "Paid".
-    // checkout.js is fetched only when Pay is pressed, so visiting the page loads nothing
-    // from a third party. The checks and their wording come from payments/rules.mjs, the
-    // module the payments service itself uses.
-    import { MIN_PAISE, parseRupees, problemWith, rupees, tidy } from '../../payments/rules.mjs';
+    // The pay form. It asks /pay/api/order for a Razorpay order for the chosen offer, opens
+    // Razorpay's checkout on it, then has /pay/api/verify check the result with Razorpay before
+    // showing "Paid". checkout.js is fetched only when Pay is pressed, so visiting the page loads
+    // nothing from a third party. Prices, checks and their wording come from
+    // payments/rules.mjs, the module the payments service itself uses.
+    import { dollars, offerFor, problemWith, tidy } from '../../payments/rules.mjs';
     import { site } from '../lib/site';
     import palette from '../lib/palette.json';
 
     type Order = { id: string; amount: number; currency: string; key_id: string };
     type Answer = { status: number; body: Record<string, any> };
     type Success = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
-    type Fields = 'invoice' | 'amount' | 'name' | 'email' | 'phone';
+    type Fields = 'offer' | 'name' | 'email' | 'phone';
 
     const form = document.getElementById('pay') as HTMLFormElement | null;
     if (form) {
       form.hidden = false;
-      const field = (name: Fields) => form.elements.namedItem(name) as HTMLInputElement;
+      const field = (name: Exclude<Fields, 'offer'>) => form.elements.namedItem(name) as HTMLInputElement;
+      const radios = [...document.querySelectorAll<HTMLInputElement>('input[name="offer"][form="pay"]')];
+      const offers = document.querySelector('.offers') as HTMLElement;
       const status = form.querySelector('.brief__status') as HTMLElement;
       const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
       const done = document.getElementById('pay-done') as HTMLElement;
       const email = site.email;
       const say = (text: string) => (status.textContent = text);
+      const chosen = () => radios.find((r) => r.checked)?.value ?? '';
 
-      // A link can carry the invoice and the amount, e.g. /pay/?invoice=KRY-2026-014&amount=45000
-      const q = new URLSearchParams(location.search);
-      for (const name of ['invoice', 'amount'] as const) {
-        const value = q.get(name);
-        if (value) field(name).value = value.slice(0, field(name).maxLength);
-      }
+      // A link can pick the offer, e.g. /pay/?offer=call
+      const asked = radios.find((r) => r.value === new URLSearchParams(location.search).get('offer'));
+      if (asked) asked.checked = true;
 
-      const details = () => tidy({ ...Object.fromEntries(new FormData(form)), amount_paise: parseRupees(field('amount').value) });
+      const details = () => tidy({ ...Object.fromEntries(new FormData(form)), offer: chosen() });
       const label = () => {
-        const paise = parseRupees(field('amount').value);
-        button.textContent = paise >= MIN_PAISE ? `Pay ${rupees(paise)}` : 'Pay';
+        const offer = offerFor(chosen());
+        button.textContent = offer ? `Pay ${dollars(offer.cents)}` : 'Pay';
       };
       label();
 
       const flag = (name: Fields, text: string) => {
-        const input = field(name);
-        input.setAttribute('aria-invalid', 'true');
+        const input = name === 'offer' ? radios[0] : field(name);
+        if (name !== 'offer') input.setAttribute('aria-invalid', 'true');
         input.focus();
         say(text);
       };
@@ -154,14 +221,16 @@ import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
 
       // The order made for the details on screen. If the payer closes the checkout and presses
       // Pay again without changing anything, the same order opens again: a payment they already
-      // approved in a UPI app then makes Razorpay refuse a second one, instead of charging twice.
+      // approved with their bank then makes Razorpay refuse a second one, instead of charging twice.
       let current: { key: string; order: Order } | null = null;
 
-      const showDone = (amount: number, invoice: string, paymentId: string) => {
-        (done.querySelector('[data-amount]') as HTMLElement).textContent = rupees(amount);
-        (done.querySelector('[data-invoice]') as HTMLElement).textContent = invoice;
+      const showDone = (amount: number, offerId: string, paymentId: string) => {
+        (done.querySelector('[data-amount]') as HTMLElement).textContent = dollars(amount);
+        (done.querySelector('[data-offer]') as HTMLElement).textContent = offerFor(offerId)?.name ?? offerId;
+        done.querySelectorAll<HTMLElement>('[data-next]').forEach((p) => (p.hidden = p.dataset.next !== offerId));
         (done.querySelector('[data-payment]') as HTMLElement).textContent = paymentId;
         form.hidden = true;
+        offers.hidden = true;
         done.hidden = false;
         done.focus();
         (window as any).countClick?.('pay-done');
@@ -170,20 +239,20 @@ import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
       // After Razorpay takes the money the button stays disabled whatever happens, so a payment
       // that could not be confirmed is never paid a second time by mistake. A confirmation that
       // is not settled yet (Razorpay still processing, a dropped connection) is tried again.
-      const confirmPayment = (r: Success, amount: number, invoice: string, attempt = 0) => {
+      const confirmPayment = (r: Success, amount: number, offerId: string, attempt = 0) => {
         say(attempt ? 'Still confirming the payment with Razorpay…' : 'Confirming the payment with Razorpay…');
         const stuck = (why: string) =>
           say(`${why} If money left your account, it is safe: write to ${email} and quote payment ID ${r.razorpay_payment_id}.`);
         const again = (why: string) => {
           if (attempt >= 4) return stuck(why);
-          setTimeout(() => confirmPayment(r, amount, invoice, attempt + 1), 2000 * 2 ** attempt);
+          setTimeout(() => confirmPayment(r, amount, offerId, attempt + 1), 2000 * 2 ** attempt);
         };
         api('verify', r).then(
           (res) => {
             // 409: an earlier try got through even though its answer did not.
             if (res.status === 200 || res.status === 409) {
               current = null;
-              showDone(amount, invoice, r.razorpay_payment_id);
+              showDone(amount, offerId, r.razorpay_payment_id);
             } else if (res.status >= 500 || res.status === 429) {
               again(res.body.error || 'Could not confirm the payment yet.');
             } else {
@@ -201,39 +270,37 @@ import { MAX_PAISE, MAX_LENGTH, rupees } from '../../payments/rules.mjs';
           amount: order.amount,
           currency: order.currency,
           name: site.name,
-          description: `Invoice ${d.invoice}`,
+          description: offerFor(d.offer)?.name,
           image: `${location.origin}/logo.png`,
           prefill: { name: d.name, email: d.email, contact: d.phone },
-          notes: { invoice: d.invoice },
+          notes: { offer: d.offer },
           theme: { color: palette.accent },
-          handler: (r: Success) => confirmPayment(r, order.amount, d.invoice),
+          handler: (r: Success) => confirmPayment(r, order.amount, d.offer),
           modal: {
             ondismiss: () => {
               busy(false);
-              say('The payment window was closed. If you approved the payment in your UPI or bank app, it can take a minute to arrive, so do not pay again. Otherwise, press Pay to try again.');
+              say('The payment window was closed. If you finished paying with your bank, it can take a minute to arrive, so do not pay again. Otherwise, press Pay to try again.');
             },
           },
         });
         rzp.on('payment.failed', (r: any) => {
           const why = r?.error?.description;
-          say(`${why ? why + ' ' : ''}Try again in the payment window, with the same or another method.`);
+          say(`${why ? why + ' ' : ''}Try again in the payment window, or write to ${email} for another way to pay.`);
         });
         say('');
         rzp.open();
       };
 
-      form.addEventListener('input', (e) => {
-        const input = e.target as HTMLInputElement;
-        input.removeAttribute('aria-invalid');
-        if (input.name === 'amount') label();
-      });
+      // The radios live outside the form, so their changes are watched on the cards.
+      offers.addEventListener('change', label);
+      form.addEventListener('input', (e) => (e.target as HTMLInputElement).removeAttribute('aria-invalid'));
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (button.disabled) return;
         const d = details();
         const problem = problemWith(d);
-        if (problem) return flag(problem[0] as Fields, problem[1].replace('Write to us', `Write to ${email}`));
+        if (problem) return flag(problem[0] as Fields, problem[1]);
 
         const key = JSON.stringify(d);
         busy(true);
