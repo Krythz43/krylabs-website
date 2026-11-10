@@ -1,4 +1,4 @@
-// Invoice payments for krylabs.com/pay/, through Razorpay.
+// Payments for krylabs.com/pay/, through Razorpay: the fixed-price offers in payments/rules.mjs.
 //
 // The site is static files. Creating a Razorpay order needs the key secret, which must never
 // reach a browser, so this small service holds it. Caddy proxies /pay/api/* here.
@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { CURRENCY, tidy, problemWith } from './rules.mjs';
+import { CURRENCY, offerFor, tidy, problemWith } from './rules.mjs';
 
 const PORT = Number(process.env.PORT) || 3073;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -32,7 +32,8 @@ const MODE = KEY_ID.startsWith('rzp_test_') ? 'test' : 'live';
 
 // ---------------------------------------------------------------- ledger
 // One JSONL file: every order created, every confirmation and capture, every webhook. Enough to
-// match a payment to an invoice by hand, and to rebuild the order list after a restart.
+// match a payment to its buyer by hand, and to rebuild the order list after a restart. (The name
+// is from when the page took invoice payments; lines from then name an invoice, not an offer.)
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const LEDGER = path.join(DATA_DIR, 'invoice-payments.jsonl');
 
@@ -41,8 +42,8 @@ const LEDGER = path.join(DATA_DIR, 'invoice-payments.jsonl');
 // valid (order, payment, signature) triple could be replayed against us.
 //   paid:     false, 'checking' while a confirmation is with Razorpay, or true once confirmed
 //   captured: the id of the payment captured against it, so a second is never captured
-const orders = new Map(); // order_id -> { id, amount, invoice, paid, captured, lock }
-const newOrder = (id, amount, invoice) => ({ id, amount, invoice, paid: false, captured: null, lock: Promise.resolve() });
+const orders = new Map(); // order_id -> { id, amount, currency, offer, paid, captured, lock }
+const newOrder = (id, amount, currency, offer) => ({ id, amount, currency, offer, paid: false, captured: null, lock: Promise.resolve() });
 
 // Resolves to false when the line could not be written. An order is only handed to a payer once
 // it is on disk, since the ledger is how this service remembers its orders across a restart.
@@ -67,7 +68,8 @@ try {
       console.error('ledger: skipping a corrupt line'); // one bad line must not lose the rest
       continue;
     }
-    if (e.event === 'order.created') orders.set(e.order_id, newOrder(e.order_id, e.amount, e.invoice));
+    // Lines from the invoice days carry no currency or offer: those orders were in rupees.
+    if (e.event === 'order.created') orders.set(e.order_id, newOrder(e.order_id, e.amount, e.currency ?? 'INR', e.offer ?? `invoice ${e.invoice}`));
     const o = orders.get(e.order_id);
     if (!o) continue;
     if (e.event === 'verify.ok') o.paid = true;
@@ -182,7 +184,7 @@ function visitorOf(req) {
 }
 
 // ---------------------------------------------------------------- capture
-const matchesOrder = (p, order) => p.order_id === order.id && p.amount === order.amount && p.currency === CURRENCY;
+const matchesOrder = (p, order) => p.order_id === order.id && p.amount === order.amount && p.currency === order.currency;
 
 // Razorpay refunds an authorized payment that is never captured, so one that matches its order
 // is captured here, by whichever of /verify and the webhook sees it first, rather than relying
@@ -202,12 +204,12 @@ function captureIfAuthorized(payment, order) {
     }
     if (order.captured && order.captured !== payment.id) {
       console.error(`not capturing ${payment.id}: ${order.id} already has ${order.captured} captured`);
-      void record('capture.skipped', { order_id: order.id, payment_id: payment.id, invoice: order.invoice, captured: order.captured });
+      void record('capture.skipped', { order_id: order.id, payment_id: payment.id, offer: order.offer, captured: order.captured });
       return rzp(route);
     }
     let after;
     try {
-      after = await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: order.amount, currency: CURRENCY }) });
+      after = await rzp(`${route}/capture`, { method: 'POST', body: JSON.stringify({ amount: order.amount, currency: order.currency }) });
     } catch (err) {
       console.error(`capture of ${payment.id} failed:`, err.message); // often auto-capture got there first
       after = await rzp(route);
@@ -221,9 +223,10 @@ function captureIfAuthorized(payment, order) {
 
 // ---------------------------------------------------------------- routes
 
-// POST /pay/api/order: { invoice, amount_paise, name, email, phone? } → a Razorpay order.
-// The amount comes from the payer here on purpose: they are paying the total printed on an
-// invoice we sent. The invoice reference rides along so the payment can be matched to it.
+// POST /pay/api/order: { offer, name, email, phone? } → a Razorpay order for that offer.
+// The price is the offer's own, from rules.mjs: nothing the browser sends sets the amount.
+// The offer and the buyer's details ride along in the order's notes, so the Razorpay
+// dashboard shows who bought what.
 async function createOrder(req, res) {
   let body;
   try {
@@ -240,7 +243,8 @@ async function createOrder(req, res) {
   // Counted only once the form is valid, so fixing a typo never uses up a payer's attempts.
   if (rateLimited('order', visitorOf(req))) return json(res, 429, { error: 'Too many attempts. Wait a minute and try again.' });
 
-  const { invoice, amount_paise: amount, name, email, phone } = d;
+  const { offer, name, email, phone } = d;
+  const { cents: amount } = offerFor(offer);
   const receipt = `krylabs_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
   try {
     const order = await rzp('/orders', {
@@ -249,17 +253,18 @@ async function createOrder(req, res) {
         amount,
         currency: CURRENCY,
         receipt,
-        notes: { source: 'krylabs.com/pay', invoice, name, email, phone },
+        notes: { source: 'krylabs.com/pay', offer, name, email, phone },
       }),
     });
-    if (!(await record('order.created', { order_id: order.id, receipt, amount: order.amount, invoice, name, email, phone }))) {
+    const facts = { order_id: order.id, receipt, offer, amount: order.amount, currency: order.currency, name, email, phone };
+    if (!(await record('order.created', facts))) {
       return json(res, 503, { error: 'Payments are down for a moment. Please try again shortly.' });
     }
-    orders.set(order.id, newOrder(order.id, order.amount, invoice));
+    orders.set(order.id, newOrder(order.id, order.amount, order.currency, offer));
     return json(res, 200, { id: order.id, amount: order.amount, currency: order.currency, key_id: KEY_ID });
   } catch (err) {
     console.error('order failed:', err.message);
-    void record('order.failed', { invoice, amount, error: err.message });
+    void record('order.failed', { offer, amount, error: err.message });
     return json(res, 502, { error: 'Could not start the payment. Please try again in a minute.' });
   }
 }
@@ -306,13 +311,13 @@ async function verify(req, res) {
   // amount we asked, so ask Razorpay directly. Only a captured payment counts.
   try {
     const payment = await captureIfAuthorized(await rzp(`/payments/${encodeURIComponent(paymentId)}`), known);
-    const facts = { order_id: known.id, payment_id: paymentId, invoice: known.invoice, status: payment.status, amount: payment.amount, method: payment.method };
+    const facts = { order_id: known.id, payment_id: paymentId, offer: known.offer, status: payment.status, amount: payment.amount, method: payment.method };
     if (matchesOrder(payment, known) && payment.status === 'captured') {
       known.paid = true;
       // The money is in either way, so the payer hears so; but without this line a restart would
       // forget the order was confirmed, so a failure here is worth shouting about.
-      if (!(await record('verify.ok', facts))) console.error(`LEDGER: verify.ok for ${paymentId} (invoice ${known.invoice}) was not written`);
-      return json(res, 200, { ok: true, payment_id: paymentId, amount: payment.amount, invoice: known.invoice });
+      if (!(await record('verify.ok', facts))) console.error(`LEDGER: verify.ok for ${paymentId} (${known.offer}) was not written`);
+      return json(res, 200, { ok: true, payment_id: paymentId, amount: payment.amount, currency: payment.currency, offer: known.offer });
     }
     known.paid = false;
     void record('verify.not_captured', facts);
@@ -352,7 +357,7 @@ async function webhook(req, res) {
   const p = evt?.payload?.payment?.entity;
   const known = p && orders.get(p.order_id);
   if (!known) return json(res, 200, { ok: true, ignored: true });
-  const facts = { payment_id: p.id, order_id: known.id, invoice: known.invoice, amount: p.amount };
+  const facts = { payment_id: p.id, order_id: known.id, offer: known.offer, amount: p.amount };
   void record('webhook', { type: evt.event, ...facts, status: p.status, refund_id: evt.payload?.refund?.entity?.id });
   json(res, 200, { ok: true });
 

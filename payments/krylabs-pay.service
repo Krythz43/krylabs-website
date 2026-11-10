@@ -1,5 +1,5 @@
 [Unit]
-Description=krylabs.com invoice payments (Razorpay)
+Description=krylabs.com/pay payments (Razorpay)
 After=network-online.target
 Wants=network-online.target
 

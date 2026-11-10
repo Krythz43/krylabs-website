@@ -10,6 +10,7 @@ import Stack from '../components/Stack.astro';
 import Faq from '../components/Faq.astro';
 import { getApps, getPosts, onAppStore, listingFor, shotsFor, HOME_IDS } from '../lib/apps';
 import { site, credentials, workHistory, whatsapp, phoneDisplay } from '../lib/site';
+import { OFFERS, dollars } from '../../payments/rules.mjs';
 import { portraitUrl } from '../lib/portrait';
 import { organization, person, website, faqPage } from '../lib/jsonld';
 
@@ -64,22 +65,26 @@ const track = [
 ];
 
 // Fixed-scope work: a small first project with a set length, for an app that already exists.
-// `price` is printed when it is set (e.g. 'From ₹1,50,000'); until the founder fixes a figure
-// the line says how the price is agreed instead of inventing one.
-const offers: { t: string; length: string; price?: string; d: string }[] = [
+// `price` is printed when it is set; until the founder fixes a figure the line says how the
+// price is agreed instead of inventing one. The audit's price comes from payments/rules.mjs,
+// the same figure /pay/ charges, and its title links there.
+const offers: { t: string; length: string; price?: string; d: string; href?: string }[] = [
   {
     t: 'A Live Activity for your app',
     length: 'About three weeks',
     d: "For an app already on the App Store. The lock screen and Dynamic Island design, the SwiftUI views, the push updates worked out with your backend team, and the release. It is the work Krithick did on Blinkit's order tracking, done for your app.",
   },
   {
-    t: 'An iOS UX audit',
+    t: 'An iOS app audit',
     length: 'One week',
-    d: 'For an app that works but does not feel right. A written report of what to fix, in order of impact, each point with a screenshot and the change that fixes it. The report is yours to keep, whoever does the work.',
+    price: dollars(OFFERS.audit.cents),
+    d: 'For an app that works but nobody has really read, AI slop included. A written report of what to fix, in order of impact: App Review risks, crashes, speed, security and accessibility, each with the file and the change that fixes it. The report is yours to keep, whoever does the work.',
+    href: '/pay/',
   },
 ];
 const offerItems = offers.map((o) => ({
   t: o.t,
+  href: o.href,
   meta: `${o.length}. ${o.price ?? 'Fixed price, agreed before work starts'}.`,
   d: o.d,
 }));
@@ -250,6 +255,7 @@ const band = (id: string) => `section${order.indexOf(id) % 2 === 1 ? ' section--
       </div>
       <Defs items={offerItems} />
       <p class="section__after">
+        Or <a class="link" href="/pay/?offer=call" data-e="offers-call">talk it through with {first} for 30 minutes</a>, {dollars(OFFERS.call.cents)}.
         Starting from an idea instead? <a class="link" href={`#${HOME_IDS.process}`}>See how a full build works</a>.
       </p>
     </div>
