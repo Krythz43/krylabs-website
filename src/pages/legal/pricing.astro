@@ -1,27 +1,35 @@
 ---
 import Legal from '../../layouts/Legal.astro';
+import { OFFERS, dollars } from '../../../payments/rules.mjs';
 ---
-<Legal updated="November 2026" title="Pricing" description="How pricing works for Krylabs client projects and its free and paid products, subscriptions and taxes.">
+<Legal updated="November 2026" title="Pricing" description="Krylabs prices: the iOS App Audit and 30-minute call, client projects, free and paid products, subscriptions and taxes.">
 
   <p>Krylabs offers a mix of free and paid products. Pricing is shown at the point of purchase and may vary by region and platform. Subscriptions purchased through the App Store or Google Play are billed by Apple or Google.</p>
 
   <h2>How pricing works</h2>
   <p>Each product is priced independently. Free apps may offer optional in-app purchases or subscriptions that unlock additional features. Current prices are always displayed in-app or on the product's page before you pay.</p>
 
+  <h2>Fixed-price offers</h2>
+  <p>Two offers have a set price, in US dollars, paid by card at <a href="/pay/">krylabs.com/pay</a>:</p>
+  <ul>
+    <li><strong>iOS App Audit: {dollars(OFFERS.audit.cents)}.</strong> A written review of an existing iOS app, delivered within a week.</li>
+    <li><strong>30-minute call: {dollars(OFFERS.call.cents)}</strong> (regularly {dollars(OFFERS.call.was)}). A video call about your app.</li>
+  </ul>
+
   <h2>Client projects</h2>
-  <p>iOS app projects for clients are quoted individually after a call about the app. The written
-  estimate splits the work into milestones, and each milestone is invoiced when it is delivered, so
-  the full amount is never due upfront. Fixed-scope work, such as adding a Live Activity to an
-  existing app or a UX audit, has a fixed price that is agreed in writing before work starts.
-  <a class="link" href="/#faq">How projects are priced</a>.</p>
+  <p>Other iOS work for clients is quoted individually after a conversation about the app, and
+  invoiced by email. The written estimate splits the work into milestones, and each milestone is
+  invoiced when it is delivered, so the full amount is never due upfront. Fixed-scope work, such as
+  adding a Live Activity to an existing app, has a price that is agreed in writing before work
+  starts. <a class="link" href="/#faq">How projects are priced</a>.</p>
 
   <h2>Payments in India</h2>
-  <p>Payments to Krylabs in India are collected in <strong>Indian Rupees (₹ INR)</strong> through
+  <p>Invoiced work for clients in India is billed in <strong>Indian Rupees (₹ INR)</strong>, through
   invoices and payment links issued via RBI-authorised payment aggregators such as Razorpay. The
   exact amount payable, and what it covers, is always stated on the invoice or payment page before
-  you pay &mdash; there are no hidden fees. Where a product offers purchases directly on our
+  you pay, with no hidden fees. Where a product offers purchases directly on our
   websites or apps (for example, event reservations), the price is displayed the same way before
-  you confirm payment. Clients can pay an invoice online at <a href="/pay/">krylabs.com/pay</a>.</p>
+  you confirm payment.</p>
 
   <h2>Taxes</h2>
   <p>Prices may be exclusive of applicable taxes, which are calculated and shown at checkout where relevant.</p>

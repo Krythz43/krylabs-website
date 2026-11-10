@@ -79,7 +79,7 @@ src/
 │   └── og.ts              # satori + resvg renderer for /og/*.png
 ├── pages/
 │   ├── index.astro, about.astro, 404.astro
-│   ├── pay.astro          # /pay/: pay an invoice through Razorpay (see Payments)
+│   ├── pay.astro          # /pay/: buy the audit or the call through Razorpay (see Payments)
 │   ├── [app].astro        # /reelmark, /bubblenest, /blockbud, /cocotree, /oneatatime
 │   ├── writing/           # index + [slug]
 │   ├── og/[slug].png.ts   # build-time Open Graph images, one per page
@@ -173,9 +173,10 @@ URLs are byte-identical to before:
 
 ## Payments
 
-`/pay/` is where a client pays an invoice: invoice number, total, name and email, then
-Razorpay's checkout (UPI, cards, netbanking). A link can fill in the first two, so an invoice
-email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
+`/pay/` sells the two fixed-price offers, the iOS App Audit and the 30-minute call, in US
+dollars: pick one, give a name and an email, then Razorpay's checkout (cards; UPI and netbanking
+are rupee-only). A link can pick the offer: `https://krylabs.com/pay/?offer=call`. Anything else
+is quoted and invoiced by hand, not paid here.
 
 - **`payments/server.mjs`** holds the Razorpay key secret, which a static site cannot. Zero
   dependencies, like `server.js`. It creates the order (`POST /pay/api/order`), and before the
@@ -185,22 +186,22 @@ email can carry `https://krylabs.com/pay/?invoice=KRY-2026-014&amount=45000`.
   `POST /pay/api/webhook` files Razorpay's own record of each payment against this page's
   orders, captures one the page never confirmed (the payer closed the tab), and ignores
   everything else on the account. `GET /pay/api/health` says whether it runs on live or test
-  keys. An order never has a second payment captured, so a UPI request approved late, after the
-  payer switched to a card, is left for Razorpay to refund.
-- **`payments/rules.mjs`** holds the limits, the field rules and their messages. The service
-  and the page's script both import it, so they cannot disagree.
-- **The amount is the payer's**, because they are paying a total we already printed on an
-  invoice. The invoice number rides along in the order's notes, so the Razorpay dashboard
-  (Transactions → the payment → Notes) shows which invoice each payment settles.
-- **The ledger** is `invoice-payments.jsonl` in the service's state directory: every order,
-  confirmation and webhook, one JSON line each. It is also how the service remembers its orders
-  across a restart.
+  keys. An order never has a second payment captured, so a payment approved late, after the
+  payer tried again another way, is left for Razorpay to refund.
+- **`payments/rules.mjs`** holds the offers and their prices, the field rules and their
+  messages. The service charges from it and the page's script and the pricing page import it, so
+  the price shown is always the price charged. Changing a price is a one-line edit there.
+- **The price is the server's.** The page sends only which offer; any amount in the request is
+  ignored. The offer and the buyer's details ride along in the order's notes, so the Razorpay
+  dashboard (Transactions → the payment → Notes) shows who bought what.
+- **The ledger** is `invoice-payments.jsonl` in the service's state directory (named when the
+  page took invoices): every order, confirmation and webhook, one JSON line each. It is also how
+  the service remembers its orders across a restart.
 - **On the droplet** it runs as the systemd unit in `payments/krylabs-pay.service`, reading its
   keys from a root-only environment file that is never in git. Copy the unit to
   `/etc/systemd/system/` when it changes, then `systemctl daemon-reload`.
 - **Checkout.js** is only fetched when Pay is pressed, so a visit to `/pay/` loads nothing from a
   third party (see `/legal/privacy/`).
-- One payment is capped at ₹5,00,000 and INR only; the page sends anything else to email.
 - Each visitor (an IPv6 one by its /64) can start 8 payments and send 20 confirmations a minute.
 
 ## Traffic
