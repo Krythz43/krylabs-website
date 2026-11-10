@@ -109,12 +109,12 @@ const post = (route, body, headers = { 'cf-connecting-ip': `10.0.0.${++ip}` }) =
     body: typeof body === 'string' ? body : JSON.stringify(body),
   }).then(async (r) => ({ status: r.status, body: await r.json() }));
 
-const good = { invoice: 'KRY-2026-014', amount_paise: 4_500_000, name: 'Asha Rao', email: 'asha@example.com', phone: '+91 98450 12345' };
+const good = { offer: 'audit', name: 'Asha Rao', email: 'asha@example.com', phone: '+91 98450 12345' };
 
 async function paidOrder(overrides = {}, existing) {
   const order = existing ?? (await post('order', good)).body;
   const paymentId = `pay_${crypto.randomBytes(4).toString('hex')}`;
-  payments.set(paymentId, { id: paymentId, order_id: order.id, amount: order.amount, currency: 'INR', status: 'captured', method: 'upi', ...overrides });
+  payments.set(paymentId, { id: paymentId, order_id: order.id, amount: order.amount, currency: 'USD', status: 'captured', method: 'card', ...overrides });
   return { order, paymentId, signature: sign(`${order.id}|${paymentId}`) };
 }
 
@@ -123,30 +123,36 @@ test('health says which keys it runs on', async () => {
   assert.deepEqual(r, { ok: true, mode: 'test', webhook: true });
 });
 
-test('creates an order for the amount and invoice given, and hands back only what checkout needs', async () => {
+test("charges each offer its own price in dollars, and hands back only what checkout needs", async () => {
   const r = await post('order', good);
   assert.equal(r.status, 200);
   assert.deepEqual(Object.keys(r.body).sort(), ['amount', 'currency', 'id', 'key_id']);
   assert.equal(r.body.key_id, KEY_ID);
-  const sent = created.at(-1);
-  assert.equal(sent.amount, 4_500_000);
-  assert.equal(sent.currency, 'INR');
-  assert.equal(sent.notes.invoice, 'KRY-2026-014');
+  let sent = created.at(-1);
+  assert.deepEqual([sent.amount, sent.currency], [200_00, 'USD']);
+  assert.equal(sent.notes.offer, 'audit');
   assert.equal(sent.notes.phone, '+919845012345');
+
+  assert.equal((await post('order', { ...good, offer: 'call' })).status, 200);
+  sent = created.at(-1);
+  assert.deepEqual([sent.amount, sent.currency, sent.notes.offer], [79_00, 'USD', 'call']);
+});
+
+test('ignores any amount or currency the browser sends', async () => {
+  assert.equal((await post('order', { ...good, amount: 1, amount_paise: 1, cents: 1, currency: 'INR' })).status, 200);
+  assert.deepEqual([created.at(-1).amount, created.at(-1).currency], [200_00, 'USD']);
 });
 
 test('turns away bad orders before Razorpay sees them', async () => {
   const before = created.length;
   const cases = [
-    { amount_paise: 0 },
-    { amount_paise: 99 },
-    { amount_paise: 1500.5 },
-    { amount_paise: '4500000' },
-    { amount_paise: 5_00_000_01 },
-    { invoice: '' },
-    { invoice: '<script>' },
-    { invoice: 'K'.repeat(41) },
+    { offer: '' },
+    { offer: 'retainer' },
+    { offer: 'constructor' },
+    { offer: '__proto__' },
+    { offer: 'toString' },
     { name: 'A' },
+    { name: 'A'.repeat(81) },
     { email: 'not-an-email' },
     { phone: '12' },
   ];
@@ -154,8 +160,10 @@ test('turns away bad orders before Razorpay sees them', async () => {
     const r = await post('order', { ...good, ...c });
     assert.equal(r.status, 400, JSON.stringify(c));
     assert.ok(r.body.error);
-    assert.equal(r.body.field, Object.keys(c)[0].replace('amount_paise', 'amount'), JSON.stringify(c));
+    assert.equal(r.body.field, Object.keys(c)[0], JSON.stringify(c));
   }
+  const { offer, ...noOffer } = good;
+  assert.equal((await post('order', noOffer)).body.field, 'offer');
   assert.equal((await post('order', 'null')).status, 400);
   assert.equal((await post('order', '{nope')).status, 400);
   assert.equal(created.length, before);
@@ -171,7 +179,8 @@ test('verifies a captured payment once, and refuses it a second time', async () 
   const ok = await post('verify', fields);
   assert.equal(ok.status, 200);
   assert.equal(ok.body.payment_id, paymentId);
-  assert.equal(ok.body.invoice, 'KRY-2026-014');
+  assert.equal(ok.body.offer, 'audit');
+  assert.deepEqual([ok.body.amount, ok.body.currency], [200_00, 'USD']);
   assert.equal((await post('verify', fields)).status, 409);
 });
 
@@ -209,7 +218,7 @@ test('captures an authorized payment before calling it paid', async () => {
 });
 
 test('does not call a payment complete when Razorpay disagrees, and lets it verify once it settles', async () => {
-  for (const wrong of [{ amount: 100 }, { status: 'failed' }, { currency: 'USD' }, { order_id: 'order_other' }, { status: 'authorized', amount: 100 }]) {
+  for (const wrong of [{ amount: 100 }, { status: 'failed' }, { currency: 'INR' }, { order_id: 'order_other' }, { status: 'authorized', amount: 100 }]) {
     const { order, paymentId, signature } = await paidOrder(wrong);
     const r = await post('verify', { razorpay_order_id: order.id, razorpay_payment_id: paymentId, razorpay_signature: signature });
     assert.equal(r.status, 400, JSON.stringify(wrong));
@@ -274,7 +283,7 @@ test('limits how often one visitor can start a payment, without counting typos',
   const me = { 'cf-connecting-ip': '192.0.2.7' };
   for (let i = 0; i < 10; i++) assert.equal((await post('order', { ...good, email: 'typo' }, me)).status, 400);
   const statuses = [];
-  for (let i = 0; i < 9; i++) statuses.push((await post('order', { ...good, amount_paise: 100 }, me)).status);
+  for (let i = 0; i < 9; i++) statuses.push((await post('order', good, me)).status);
   assert.deepEqual(statuses.slice(0, 8), Array(8).fill(200));
   assert.equal(statuses[8], 429);
   assert.equal((await post('order', good, { 'cf-connecting-ip': '192.0.2.8' })).status, 200, 'other visitors are unaffected');
@@ -287,7 +296,7 @@ test('copes with a forwarded address that is not one', async () => {
 });
 
 test('counts an IPv6 visitor by its /64', async () => {
-  const from = (ip) => post('order', { ...good, amount_paise: 100 }, { 'cf-connecting-ip': ip });
+  const from = (ip) => post('order', good, { 'cf-connecting-ip': ip });
   for (let i = 1; i <= 8; i++) assert.equal((await from(`2001:db8:aa:1::${i.toString(16)}`)).status, 200);
   assert.equal((await from('2001:0db8:00aa:0001:ffff::9')).status, 429);
   assert.equal((await from('2001:db8:aa:2::1')).status, 200);
@@ -325,7 +334,7 @@ test('accepts only signed webhooks, and files only the ones about its own orders
   assert.deepEqual(await hook(JSON.stringify({ event: 'subscription.charged', payload: { subscription: { entity: { id: 'sub_1' } } } })), { status: 200, body: { ok: true, ignored: true } });
 
   const ledger = fs.readFileSync(path.join(dataDir, 'invoice-payments.jsonl'), 'utf8');
-  assert.match(ledger, /"event":"webhook".*"payment_id":"pay_hook".*"invoice":"KRY-2026-014"/);
+  assert.match(ledger, /"event":"webhook".*"payment_id":"pay_hook".*"offer":"audit"/);
   assert.doesNotMatch(ledger, /pay_elsewhere|sub_1/);
 });
 
@@ -362,6 +371,9 @@ test('a restart keeps open orders payable and confirmed ones confirmed', async (
   const done = await paidOrder();
   const doneFields = { razorpay_order_id: done.order.id, razorpay_payment_id: done.paymentId, razorpay_signature: done.signature };
   assert.equal((await post('verify', doneFields)).status, 200);
+  // An order from when the page took invoices: no currency or offer on its line, and in rupees.
+  const ledger = path.join(dataDir, 'invoice-payments.jsonl');
+  fs.appendFileSync(ledger, JSON.stringify({ at: new Date().toISOString(), event: 'order.created', order_id: 'order_old', amount: 100, invoice: 'SMOKE-TEST' }) + '\n');
 
   await stopServer();
   await startServer();
@@ -369,4 +381,9 @@ test('a restart keeps open orders payable and confirmed ones confirmed', async (
   const r = await post('verify', { razorpay_order_id: open.order.id, razorpay_payment_id: open.paymentId, razorpay_signature: open.signature });
   assert.equal(r.status, 200);
   assert.equal((await post('verify', doneFields)).status, 409);
+
+  const old = await paidOrder({ currency: 'INR' }, { id: 'order_old', amount: 100 });
+  const replayed = await post('verify', { razorpay_order_id: 'order_old', razorpay_payment_id: old.paymentId, razorpay_signature: old.signature });
+  assert.equal(replayed.status, 200, 'an old rupee order still confirms in rupees');
+  assert.equal(replayed.body.offer, 'invoice SMOKE-TEST');
 });
