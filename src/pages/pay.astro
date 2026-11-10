@@ -184,7 +184,7 @@ const cards = [
       label();
 
       const flag = (name: Fields, text: string) => {
-        const input = name === 'offer' ? radios[0] : field(name);
+        const input = name === 'offer' ? (radios.find((r) => r.checked) ?? radios[0]) : field(name);
         if (name !== 'offer') input.setAttribute('aria-invalid', 'true');
         input.focus();
         say(text);
@@ -291,8 +291,12 @@ const cards = [
         rzp.open();
       };
 
-      // The radios live outside the form, so their changes are watched on the cards.
-      offers.addEventListener('change', label);
+      // The radios live outside the form, so their changes are watched on the cards. A new choice
+      // clears what was said about the last one, unless a payment is under way.
+      offers.addEventListener('change', () => {
+        label();
+        if (!button.disabled) say('');
+      });
       form.addEventListener('input', (e) => (e.target as HTMLInputElement).removeAttribute('aria-invalid'));
 
       form.addEventListener('submit', async (e) => {

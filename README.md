@@ -190,7 +190,8 @@ is quoted and invoiced by hand, not paid here.
   payer tried again another way, is left for Razorpay to refund.
 - **`payments/rules.mjs`** holds the offers and their prices, the field rules and their
   messages. The service charges from it and the page's script and the pricing page import it, so
-  the price shown is always the price charged. Changing a price is a one-line edit there.
+  the price shown is the price charged, as long as both are deployed together: a price change is
+  a one-line edit there, then the usual build and a `systemctl restart krylabs-pay`.
 - **The price is the server's.** The page sends only which offer; any amount in the request is
   ignored. The offer and the buyer's details ride along in the order's notes, so the Razorpay
   dashboard (Transactions → the payment → Notes) shows who bought what.
